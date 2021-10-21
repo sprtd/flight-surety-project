@@ -6,22 +6,25 @@ import '@openzeppelin/contracts/utils/math/SafeMath.sol';
 
 
 contract FlightSuretyApp {
-    IFlightSuretyData iFlightSuretyData;
-    
-    address flightSuretyDataAddress;
-    
-    address contractOwner;
+  IFlightSuretyData iFlightSuretyData;
+  
+  address flightSuretyDataAddress;
+  
+  address public contractOwner;
     
   
+  constructor(address _flightSuretyDataAddress) {
+    contractOwner = msg.sender;
+    flightSuretyDataAddress = _flightSuretyDataAddress;
+    iFlightSuretyData = IFlightSuretyData(_flightSuretyDataAddress);
     
-    constructor(address _flightSuretyDataAddress) {
-        contractOwner = msg.sender;
-        flightSuretyDataAddress = _flightSuretyDataAddress;
-        iFlightSuretyData = IFlightSuretyData(_flightSuretyDataAddress);
-     
-    }
+    startAirlineApplication('alpha1');
+    registerAirline(contractOwner, 2);
     
-      /********************************************************************************************/
+  }
+    
+    
+    /********************************************************************************************/
     /*                                       FUNCTION MODIFIERS                                 */
   /********************************************************************************************/
   
@@ -33,36 +36,36 @@ contract FlightSuretyApp {
 
     
     
-    function registerAirline(address _account, uint8 _state) public {
-        iFlightSuretyData.updateAirlineStatus(_account, _state);
-    }
-    
-    function startAirlineApplication(string memory _name) public  {
-        iFlightSuretyData.createNewAirline(_name, msg.sender);
-        
-    }
+  function registerAirline(address _account, uint8 _state) public {
+      iFlightSuretyData.updateAirlineStatus(_account, _state);
+  }
+  
+  function startAirlineApplication(string memory _name) public  {
+      iFlightSuretyData.createNewAirline(_name, msg.sender);
+      
+  }
     
     
   /********************************************************************************************/
   /*                                       UTILITY FUNCTIONS                                 */
   /********************************************************************************************/
     
-      function getOwner() external view returns(address) {
-        return contractOwner;
-      }
+  function getOwner() external view returns(address) {
+    return contractOwner;
+  }
+  
+  
+      
+  function airlineAuthorizationStatus(address _account)  public view returns(bool) {
+      return iFlightSuretyData.getAirlineAuthorizationStatus(_account);
+  }
       
       
       
-      function airlineAuthorizationStatus(address _account)  public view returns(bool) {
-         return iFlightSuretyData.getAirlineAuthorizationStatus(_account);
-      }
-      
-      
-      
-      function airlineDetails(address _account) public view returns(uint256 id, string memory name, address airlineAccount, string memory state) {
-          (id, name, airlineAccount, state) = iFlightSuretyData.getAirlineDetails(_account);
-          return (id, name, airlineAccount, state);
-      }
+  function airlineDetails(address _account) public view returns(uint256 id, string memory name, address airlineAccount, string memory state) {
+      (id, name, airlineAccount, state) = iFlightSuretyData.getAirlineDetails(_account);
+      return (id, name, airlineAccount, state);
+  }
 
 }
 
@@ -71,11 +74,11 @@ contract FlightSuretyApp {
 
 
 interface IFlightSuretyData {
-    function createNewAirline(string memory _name, address _account) external;
-    function updateAirlineStatus(address _account, uint8 _state) external;
-    function onlyAuthorizedAirlines(address _account) external view;
-    function getAirlineAuthorizationStatus(address _account) external view returns(bool status);
-    function getAirlineDetails(address _account) external view returns(uint256 id, string memory name, address airlineAccount, string memory state);
+  function createNewAirline(string memory _name, address _account) external;
+  function updateAirlineStatus(address _account, uint8 _state) external;
+  function onlyAuthorizedAirlines(address _account) external view;
+  function getAirlineAuthorizationStatus(address _account) external view returns(bool status);
+  function getAirlineDetails(address _account) external view returns(uint256 id, string memory name, address airlineAccount, string memory state);
 }
 
 

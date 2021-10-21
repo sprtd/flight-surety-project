@@ -3,20 +3,15 @@ const FlightSuretyApp = artifacts.require('FlightSuretyApp')
 
 module.exports = async deployer => {
   try {
-    deployer.deploy(FlightSuretyData)
-    const flightSuretyData = FlightSuretyData.deployed()
+    await deployer.deploy(FlightSuretyData)
+    const flightSuretyData = await FlightSuretyData.deployed()
     console.log('flight surety data address: ', flightSuretyData.address)
 
-    deployer.deploy(FlightSuretyApp, flightSuretyData.address)
-    const flightSuretyApp = FlightSuretyApp.deployed()
-    console.log('flight surety app address: ', flightSuretyApp.address)
-
-    
-
-    console.log()
-    
+    await deployer.deploy(FlightSuretyApp, flightSuretyData.address)
+    const flightSuretyApp = await FlightSuretyApp.deployed()
+    console.log('flight surety app address: ', flightSuretyApp.address)    
   } catch(err) {
-    console.log('deploy error: ', err )
+    console.log('deploy error:', err )
     
   }
 }
