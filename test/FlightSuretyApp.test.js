@@ -30,7 +30,6 @@ contract('FlightSuretyApp', async payloadAccounts => {
     addr4: payloadAccounts[4],
     addr5: payloadAccounts[5],
     // addr6: payloadAccounts[6]
-
   }
 
 

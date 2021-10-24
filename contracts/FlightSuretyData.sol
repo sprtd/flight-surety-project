@@ -6,6 +6,8 @@ import '@openzeppelin/contracts/utils/math/SafeMath.sol';
 contract FlightSuretyData {
   using SafeMath for uint256;
   
+  
+  
  
 
 
@@ -14,9 +16,11 @@ contract FlightSuretyData {
   /********************************************************************************************/
 
   uint256 totalAppliedAirlines;
+  
   address private contractOwner;
   bool private operational;
-
+    
+  uint256 totalRegisteredAirlines;
   enum AirlineStatus { 
     Unassigned,
     Applied,
@@ -36,6 +40,10 @@ contract FlightSuretyData {
 
   mapping(address => Airline) airlines;
   
+  mapping(AirlineStatus => uint256) public registeredAirlines;
+  
+
+  
   mapping(address => uint256[]) paidAirlines;
   
 
@@ -44,27 +52,47 @@ contract FlightSuretyData {
   /*                                       FUNCTION MODIFIERS                                 */
   /********************************************************************************************/
  
+  
+ 
 
   function _onlyOwner() internal view {
     require(msg.sender == contractOwner, 'caller not owner');
   }
   
-  function _onlyAuthorizedAirlines(address _account) internal view {
-     require(_account == contractOwner || airlines[_account].status == AirlineStatus.Applied, 'caller not authorized');
+  function onlyAuthorizedAirlines(address _account) external view {
+     require(_account == contractOwner || airlines[_account].status == AirlineStatus.Applied || airlines[_account].status == AirlineStatus.Registered, 'airline not authorized');
+  }
+  
+  function onlyRegisteredAirlines(address _account) external view {
+      require(airlines[_account].status == AirlineStatus.Registered, 'caller not registered');
+  }
+  
+  function onlyAuthorizeRegistrants(address _account) external view {
+      require(airlines[_account].status == AirlineStatus.Registered || _account == contractOwner, 'not authorized to register');
+  }
+  
+  modifier checkCaller(address _account) {
+      this.onlyAuthorizeRegistrants(_account);
+      _;
   }
   
   
-  function onlyOwnerAuthorizedAirlines(address _account) external view {
-     _onlyAuthorizedAirlines(_account);
+  
+  
+  
+  modifier checkRegistration(address _account) {
+      this.onlyRegisteredAirlines(_account);
+      _;
   }
+  
 
   modifier onlyOwner() {
     _onlyOwner();
     _;
   }
   
-  modifier onlyAuthorizedAirlines(address _account) {
-      _onlyAuthorizedAirlines(_account);
+  modifier onlyAuthorized(address _account) {
+    this.onlyAuthorizedAirlines(_account);
       _;
   }
 
@@ -73,18 +101,14 @@ contract FlightSuretyData {
     _;
   }
 
-  modifier hasApplied(address _account) {
-    require(airlines[_account].status == AirlineStatus.Applied, 'na application');
-    _;
-  }
-  
+ 
 
-
+ 
   /********************************************************************************************/
   /*                                       EVENTS                                */
   /********************************************************************************************/
 
-  event LogNewAirline(address indexed account, uint256 timestamp, string airlineStatus);
+  event LogCreatedAirline(address indexed account, uint256 timestamp, string airlineStatus);
   event LogStatusUpdated(address indexed account, string airlineStatus);
 
 
@@ -99,8 +123,6 @@ contract FlightSuretyData {
     /********************************************************************************************/
   /*                                       CORE FUNCTIONS                                 */
   /********************************************************************************************/
-
-
   function setOperatinalStatus(bool _status) external onlyOwner {
     require(operational != _status, 'must not be current status');
     operational = _status;
@@ -117,22 +139,53 @@ contract FlightSuretyData {
       airlineAccount: _account
     });
     
+    
     string memory state;
-    (,,,state) = _getAirlineDetails(_account);
-    emit LogNewAirline(msg.sender, block.timestamp, state);
+    (,,,state) = this.getAirlineDetails(_account);
+
+    emit LogCreatedAirline(msg.sender, block.timestamp, state);
+   
   }
   
   
-  function updateAirlineStatus(address _account, uint8 _state) external hasApplied(_account) onlyAuthorizedAirlines(_account) {
-     require(_state <= 3, 'not within enum range');
-     uint8 statusNum = uint8(airlines[_account].status);
-     require(_state > statusNum, 'status cannot be lower than current state');
-     airlines[_account].status = AirlineStatus(_state);
-     statusNum = uint8(airlines[_account].status);
-     string memory state;
-     (,,,state) = _getAirlineDetails(_account);
+  function updateAirlineStatus(address _account, uint8 _state) external onlyAuthorized(_account) isOperational {
+    uint8 statusNum = uint8(airlines[_account].status);
+    require(_state <= 3, 'not within enum range');
+    require(_state > statusNum, 'status cannot be lower than current state');
+    disableOperational();
+    airlines[_account].status = AirlineStatus(_state);
+    totalRegisteredAirlines = totalRegisteredAirlines.add(1);
+    
+    statusNum = uint8(airlines[_account].status);
   
+    
+    
+    string memory state;
+    (,,,state) = this.getAirlineDetails(_account);
+    emit LogStatusUpdated(_account, state);
   }
+
+  
+  function disableOperational() public {
+    if(totalRegisteredAirlines >= 3) {
+      operational = false;
+        
+    }
+
+      
+  }
+  
+  
+  function enableOperationalStatus(bool _status) checkRegistration(tx.origin) external {
+    require(operational != _status, 'already in operational mode');
+    operational = _status;
+    
+    
+      
+  }
+
+ 
+
 
 
 
@@ -151,30 +204,22 @@ contract FlightSuretyData {
   
   
   
-  function gettotalAppliedAirlines() external view returns(uint256) {
+  function getTotalAppliedAirlines() external view returns(uint256) {
       return totalAppliedAirlines;
   }
   
   function getAirlineAuthorizationStatus(address _account) external view returns(bool status) {
-    if(airlines[_account].status == AirlineStatus.Applied) {
-        return status = true;
-        
-    } else if(airlines[_account].status == AirlineStatus.Registered) {
-        return status = true;
-    } else {
-        return status = false;
-    }
+      if(airlines[_account].status == AirlineStatus.Applied) {
+         return status = true;
+          
+      } else if(airlines[_account].status == AirlineStatus.Registered) {
+         return status = true;
+      } else {
+          return status = false;
+      }
   }
-  
-  
-  function getAirlineDetails(address _account) external view returns(uint256 id, string memory name, address airlineAccount, string memory state) {
-    (id, name, airlineAccount, state) = _getAirlineDetails(_account);
-    return (id, name, airlineAccount, state);
-  }
- 
- 
 
-  function _getAirlineDetails(address _account) internal view returns(uint256 id, string memory name, address airlineAccount, string memory state) {
+  function getAirlineDetails(address _account) external view returns(uint256 id, string memory name, address airlineAccount, string memory state) {
     uint8 airlineState = uint8(airlines[_account].status);
     if(airlineState == 0) {
       state = 'Unassigned';
@@ -199,7 +244,25 @@ contract FlightSuretyData {
   
   
   function getAirlineApplicationStatus(address _account) public view returns(string memory status) {
-    (,,,status) = _getAirlineDetails(_account);
+    (,,,status) = this.getAirlineDetails(_account);
+  }
+  
+  
+  
+  function isAirlineRegistered(address _account) external view returns(bool checkStatus) {
+    uint8 airlineCheck = uint8(airlines[_account].status);
+    if(airlineCheck == 2) {
+        
+        checkStatus = true;
+    } else {
+        checkStatus = false;
+    }
+    
+    return checkStatus;
+  }
+  
+  function getTotalRegisteredAirlines() external view returns(uint256) {
+    return totalRegisteredAirlines;
   }
 
 }
