@@ -33,7 +33,6 @@ contract FlightSuretyData {
     string name;
     AirlineStatus status;
     address airlineAccount;
-    
   }
 
 
@@ -81,8 +80,8 @@ contract FlightSuretyData {
   
   
   modifier checkRegistration(address _account) {
-      this.onlyRegisteredAirlines(_account);
-      _;
+    this.onlyRegisteredAirlines(_account);
+    _;
   }
   
 
@@ -167,7 +166,7 @@ contract FlightSuretyData {
 
   
   function disableOperational() public {
-    if(totalRegisteredAirlines >= 3) {
+    if(totalRegisteredAirlines >= 4) {
       operational = false;
         
     }
