@@ -2,18 +2,13 @@
 const FlightSuretyData = artifacts.require('FlightSuretyData')
 const FlightSuretyApp = artifacts.require('FlightSuretyApp')
 
-
-const truffleAssert = require('truffle-assertions')
-let flightSuretyApp, flightSuretyData, deployer, addr1, addr2, addr3, addr4, addr5, addr6, addr7, addr8, addr9, airlineName, id, state, airlines
+const { toWei, fromWei } = require('../utils/conversion')
 
 
-
+let flightSuretyApp, flightSuretyData, flightSuretyDataAddress,  deployer, addr1, addr2, addr3, addr4, addr5, addr6, addr7, addr8, addr9, airlineName, id, state, airlines
 
 
 contract('FlightSuretyApp', async payloadAccounts => {
-
-
-
   deployer = payloadAccounts[0]
   addr1 = payloadAccounts[1]
   addr2 = payloadAccounts[2]
@@ -42,7 +37,8 @@ contract('FlightSuretyApp', async payloadAccounts => {
 
   beforeEach(async() => {
     flightSuretyData = await FlightSuretyData.new()
-    flightSuretyApp = await FlightSuretyApp.new(flightSuretyData.address)
+    flightSuretyDataAddress = flightSuretyData.address
+    flightSuretyApp = await FlightSuretyApp.new(flightSuretyDataAddress)
     
     airlineName = {
       airline1: 'alpha1',
@@ -146,15 +142,11 @@ contract('FlightSuretyApp', async payloadAccounts => {
     }) 
     
     contract('Multi-party Consensus', () => {
-      
-
       it('Tests multi-party consensus for 5th as well as subsequent airline registrations by already-registered airlines', async () => {
         await flightSuretyApp.registerAirline(addr1, 2, {from: addr1})
         await flightSuretyApp.registerAirline(addr2, 2, {from: addr1})
         await flightSuretyApp.registerAirline(addr3, 2, {from: addr1})
         await flightSuretyApp.registerAirline(addr4, 2, {from: addr1})
-        
-        
         
         await flightSuretyApp.registerViaConsensus(addr5, 2, {from: addr1})
         await flightSuretyApp.registerViaConsensus(addr5, 2, {from: addr2})
@@ -168,8 +160,6 @@ contract('FlightSuretyApp', async payloadAccounts => {
 
         console.log('consensus logs',{id5, name5, airline5Account, state5})
 
-
-
         await flightSuretyApp.registerViaConsensus(addr6, 2, {from: addr2})
         await flightSuretyApp.registerViaConsensus(addr6, 2, {from: addr3})
         await flightSuretyApp.registerViaConsensus(addr6, 2, {from: addr4})
@@ -179,6 +169,32 @@ contract('FlightSuretyApp', async payloadAccounts => {
 
         assert.equal(airline6Account, addr6)
         assert.equal(state6, state.Registered)        
+      })
+  
+    }) 
+
+
+    contract('Airline Fee Payment', () => {
+      const airlineFee = toWei(10)
+      it('Tests 10 ETH airline commitment fee payment by registered airlines', async () => {
+        await flightSuretyApp.registerAirline(addr1, 2, {from: addr1})
+        await flightSuretyApp.registerAirline(addr2, 2, {from: addr1})
+        await flightSuretyApp.registerAirline(addr3, 2, {from: addr1})
+        await flightSuretyApp.registerAirline(addr4, 2, {from: addr1})
+
+        const dataBalanceBefore = await web3.eth.getBalance(flightSuretyDataAddress)
+        console.log('dataContract balance', dataBalanceBefore)
+        
+        await flightSuretyApp.payCommitmentFee({value: airlineFee, from: addr1})
+        
+        const dataBalanceAfter = await web3.eth.getBalance(flightSuretyDataAddress)
+        console.log('dataContract balance after', dataBalanceAfter)
+
+        const ethDiff = dataBalanceAfter - dataBalanceBefore
+        console.log('eth diff', fromWei(ethDiff.toString()))
+        assert.equal(fromWei(airlineFee), fromWei(ethDiff.toString())) // difference between data contract's initial ETH balance and data contract's final ETH balance equals amount paid by airline 1
+        
+        
       })
   
     }) 

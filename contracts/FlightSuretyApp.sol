@@ -43,108 +43,114 @@ contract FlightSuretyApp {
   }
   
   
-  
-
-  
-  
-  
-
-/********************************************************************************************/
-/*                                       EVENTS                                */
-/********************************************************************************************/
-
-event LogRegisteredViaConsensus(address indexed callerAirline, address indexed registeredAirline, uint8 state);
 
   /********************************************************************************************/
-/*                                       AIRLINE FUNCTION                               */
-/********************************************************************************************/
+  /*                                       EVENTS                                */
+  /********************************************************************************************/
   
-function startAirlineApplication(string memory _name) public  {
-  iFlightSuretyData.createNewAirline(_name, msg.sender);
-    
-        
-}
+  event LogRegisteredViaConsensus(address indexed callerAirline, address indexed registeredAirline, uint8 state);
+  event LogPayCommitment(address indexed airline);
 
-function registerAirline(address _account, uint8 _state) public {
+    /********************************************************************************************/
+  /*                                       AIRLINE FUNCTION                               */
+  /********************************************************************************************/
+    
+  function startAirlineApplication(string memory _name) public  {
+    iFlightSuretyData.createNewAirline(_name, msg.sender);
+      
+          
+  }
 
-  iFlightSuretyData.updateAirlineStatus(_account, _state);
-  
-}
+  function registerAirline(address _account, uint8 _state) public {
+    iFlightSuretyData.updateAirlineStatus(_account, _state);
+    
+  }
     
     
     
+  // register via consensus
     
-    
-function registerViaConsensus(address _account, uint8 _state) public  onlyRegistered {
+  function registerViaConsensus(address _account, uint8 _state) public  onlyRegistered {
 
-  require(iFlightSuretyData.isAirlineRegistered(_account) == false, 'airline already registered');
-  
-  uint regAirlines =  iFlightSuretyData.getTotalRegisteredAirlines();
-  quorum = regAirlines / 2;
+    require(iFlightSuretyData.isAirlineRegistered(_account) == false, 'airline already registered');
     
+    uint regAirlines =  iFlightSuretyData.getTotalRegisteredAirlines();
+    quorum = regAirlines / 2;
+      
+      
+    bool isDuplicate = false;
     
-  bool isDuplicate = false;
-  
-  for(uint i = 0; i < minimumAirlines.length; i ++) {
-    if(minimumAirlines[i] == msg.sender) {
-      isDuplicate = true;
-      break;
+    for(uint i = 0; i < minimumAirlines.length; i ++) {
+      if(minimumAirlines[i] == msg.sender) {
+        isDuplicate = true;
+        break;
+      }
+    }
+
+    require(!isDuplicate, 'caller already called the function');
+
+    minimumAirlines.push(msg.sender);
+    
+
+    if(minimumAirlines.length == quorum) {
+    iFlightSuretyData.enableOperationalStatus(true);
+      iFlightSuretyData.updateAirlineStatus(_account, _state);
+      minimumAirlines = new address[](0);
+      emit LogRegisteredViaConsensus(msg.sender, _account, _state);
     }
   }
 
-  require(!isDuplicate, 'caller already called the function');
 
-  minimumAirlines.push(msg.sender);
-  
-
-  if(minimumAirlines.length == quorum) {
-  iFlightSuretyData.enableOperationalStatus(true);
-    iFlightSuretyData.updateAirlineStatus(_account, _state);
-    minimumAirlines = new address[](0);
-    emit LogRegisteredViaConsensus(msg.sender, _account, _state);
+  // pay airline fee
+    
+  function payCommitmentFee() public payable onlyRegistered {
+    require(msg.value == 10 ether, 'fee is required');
+    (bool send, ) = flightSuretyDataAddress.call{value: msg.value}('');
+    require(send, 'failed to deposit ETH');
+    iFlightSuretyData.updateToCommitState(3);
+    emit LogPayCommitment(msg.sender);
   }
-}
-  
+    
    
 /********************************************************************************************/
 /*                                       UTILITY FUNCTIONS                                 */
 /********************************************************************************************/
-    
-function getOwner() external view returns(address) {
-  return contractOwner;
-}
+      
+  function getOwner() external view returns(address) {
+    return contractOwner;
+  }
 
 
   
-function airlineAuthorizationStatus(address _account)  public view returns(bool) {
-  return iFlightSuretyData.getAirlineAuthorizationStatus(_account);
-}
+  function airlineAuthorizationStatus(address _account)  public view returns(bool) {
+    return iFlightSuretyData.getAirlineAuthorizationStatus(_account);
+  }
     
       
 
-function airlineDetails(address _account) public view returns(uint256 id, string memory name, address airlineAccount, string memory state) {
-  (id, name, airlineAccount, state) = iFlightSuretyData.getAirlineDetails(_account);
-  return (id, name, airlineAccount, state);
-}
+  function airlineDetails(address _account) public view returns(uint256 id, string memory name, address airlineAccount, string memory state) {
+    (id, name, airlineAccount, state) = iFlightSuretyData.getAirlineDetails(_account);
+    return (id, name, airlineAccount, state);
+  }
 
-function isCallerAirlineRegistered() public view returns(bool) {
-  bool status;
-  (status) = iFlightSuretyData.isAirlineRegistered(msg.sender);
-  return status;
-}
-  
+  function isCallerAirlineRegistered() public view returns(bool) {
+    bool status;
+    (status) = iFlightSuretyData.isAirlineRegistered(msg.sender);
+    return status;
+  }
     
-function getTotalRegisteredAirlines() public view returns(uint256) {
+    
+  function getTotalRegisteredAirlines() public view returns(uint256) {
     return iFlightSuretyData.getTotalRegisteredAirlines();
-}
-  
-function getOperationalStatus() public view returns(bool) {
+  }
+    
+  function getOperationalStatus() public view returns(bool) {
     return iFlightSuretyData.getOperationalStatus();
-}
+  }
 
       
   function getQuorum() public view returns(uint) {
-        return quorum;
+    return quorum;
   }
 
 }
@@ -161,6 +167,7 @@ interface IFlightSuretyData {
   function getTotalRegisteredAirlines() external view returns(uint256);
   function enableOperationalStatus(bool _status) external;
   function getOperationalStatus() external view  returns(bool);
+  function updateToCommitState(uint8 _state) external;
 }
 
 

@@ -43,7 +43,7 @@ contract FlightSuretyData {
   
 
   
-  mapping(address => uint256[]) paidAirlines;
+  mapping(address => uint256) paidAirlines;
   
 
 
@@ -138,7 +138,6 @@ contract FlightSuretyData {
       airlineAccount: _account
     });
     
-    
     string memory state;
     (,,,state) = this.getAirlineDetails(_account);
 
@@ -163,24 +162,32 @@ contract FlightSuretyData {
     (,,,state) = this.getAirlineDetails(_account);
     emit LogStatusUpdated(_account, state);
   }
+    
 
+  // update airline state to committed
+  function updateToCommitState(uint8 _state) external checkCaller(tx.origin) payable {
+    uint8 statusNum = uint8(airlines[tx.origin].status);
+    require(_state <= 3, 'not within enum range');
+    require(_state > statusNum, 'status cannot be lower than current state');
+        
+    airlines[tx.origin].status = AirlineStatus.Committed;
+         
+    string memory state;
+    (,,,state) = this.getAirlineDetails(tx.origin);
+    emit LogStatusUpdated(tx.origin, state);
+  }
+  
   
   function disableOperational() public {
     if(totalRegisteredAirlines >= 4) {
-      operational = false;
-        
+      operational = false; 
     }
-
-      
   }
   
   
   function enableOperationalStatus(bool _status) checkRegistration(tx.origin) external {
     require(operational != _status, 'already in operational mode');
     operational = _status;
-    
-    
-      
   }
 
  
@@ -208,14 +215,14 @@ contract FlightSuretyData {
   }
   
   function getAirlineAuthorizationStatus(address _account) external view returns(bool status) {
-      if(airlines[_account].status == AirlineStatus.Applied) {
-         return status = true;
-          
-      } else if(airlines[_account].status == AirlineStatus.Registered) {
-         return status = true;
-      } else {
-          return status = false;
-      }
+    if(airlines[_account].status == AirlineStatus.Applied) {
+        return status = true;
+        
+    } else if(airlines[_account].status == AirlineStatus.Registered) {
+        return status = true;
+    } else {
+        return status = false;
+    }
   }
 
   function getAirlineDetails(address _account) external view returns(uint256 id, string memory name, address airlineAccount, string memory state) {
@@ -252,9 +259,9 @@ contract FlightSuretyData {
     uint8 airlineCheck = uint8(airlines[_account].status);
     if(airlineCheck == 2) {
         
-        checkStatus = true;
+      checkStatus = true;
     } else {
-        checkStatus = false;
+      checkStatus = false;
     }
     
     return checkStatus;
@@ -262,6 +269,20 @@ contract FlightSuretyData {
   
   function getTotalRegisteredAirlines() external view returns(uint256) {
     return totalRegisteredAirlines;
+  }
+
+
+   function getDataBalance() external view returns(uint256) {
+    return address(this).balance;
+  }
+  
+  function getAirlineBalance(address _account) external view returns(uint256) {
+    return _account.balance;
+  }
+
+
+  receive() payable external {
+
   }
 
 }
