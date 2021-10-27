@@ -185,7 +185,7 @@ contract('FlightSuretyApp', async payloadAccounts => {
         const dataBalanceBefore = await web3.eth.getBalance(flightSuretyDataAddress)
         console.log('dataContract balance', dataBalanceBefore)
         
-        await flightSuretyApp.payCommitmentFee({value: airlineFee, from: addr1})
+        await flightSuretyApp.payCommitmentFee({value: airlineFee, from: addr2})
         
         const dataBalanceAfter = await web3.eth.getBalance(flightSuretyDataAddress)
         console.log('dataContract balance after', dataBalanceAfter)
@@ -193,8 +193,13 @@ contract('FlightSuretyApp', async payloadAccounts => {
         const ethDiff = dataBalanceAfter - dataBalanceBefore
         console.log('eth diff', fromWei(ethDiff.toString()))
         assert.equal(fromWei(airlineFee), fromWei(ethDiff.toString())) // difference between data contract's initial ETH balance and data contract's final ETH balance equals amount paid by airline 1
-        
-        
+
+        const airlineDetails = await flightSuretyData.getAirlineDetails(addr2)
+        const { airlineAccount, state: newState } = airlineDetails
+
+        assert.equal(airlineAccount, addr2)
+        assert.equal(newState, state.Committed)  // airline status changes to committed after 10ETH payment
+
       })
   
     }) 
