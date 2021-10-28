@@ -10,6 +10,8 @@ contract FlightSuretyApp {
   address flightSuretyDataAddress;
     
   address public contractOwner;
+
+  uint256 public constant AIRLINE_FEE =  10 ether;
     
     
   address[] minimumAirlines = new address[](0);
@@ -49,10 +51,10 @@ contract FlightSuretyApp {
   /********************************************************************************************/
   
   event LogRegisteredViaConsensus(address indexed callerAirline, address indexed registeredAirline, uint8 state);
-  event LogPayCommitment(address indexed airline);
+  event LogPayCommitment(address indexed airline, uint256 airlineFee);
 
     /********************************************************************************************/
-  /*                                       AIRLINE FUNCTION                               */
+  /*                                       AIRLINE CORE FUNCTION                               */
   /********************************************************************************************/
     
   function startAirlineApplication(string memory _name) public  {
@@ -69,7 +71,6 @@ contract FlightSuretyApp {
     
     
   // register via consensus
-    
   function registerViaConsensus(address _account, uint8 _state) public  onlyRegistered {
 
     require(iFlightSuretyData.isAirlineRegistered(_account) == false, 'airline already registered');
@@ -102,18 +103,20 @@ contract FlightSuretyApp {
 
 
   // pay airline fee
-    
   function payCommitmentFee() public payable onlyRegistered {
-    require(msg.value == 10 ether, 'fee is required');
+    require(msg.value == AIRLINE_FEE, 'fee is required');
     (bool send, ) = flightSuretyDataAddress.call{value: msg.value}('');
     require(send, 'failed to deposit ETH');
     iFlightSuretyData.updateToCommitState(3);
-    emit LogPayCommitment(msg.sender);
+    emit LogPayCommitment(msg.sender, msg.value );
   }
+
+
+  
     
    
 /********************************************************************************************/
-/*                                       UTILITY FUNCTIONS                                 */
+/*                                      AIRLINE UTILITY FUNCTIONS                                 */
 /********************************************************************************************/
       
   function getOwner() external view returns(address) {
@@ -153,10 +156,23 @@ contract FlightSuretyApp {
     return quorum;
   }
 
+   
+
+
+
+
+
+
 }
 
 
+
+
+
+
 interface IFlightSuretyData {
+
+  // airline functions
   function createNewAirline(string memory _name, address _account) external;
   function updateAirlineStatus(address _account, uint8 _state) external;
   function onlyAuthorizedAirlines(address _account) external view;
@@ -168,6 +184,8 @@ interface IFlightSuretyData {
   function enableOperationalStatus(bool _status) external;
   function getOperationalStatus() external view  returns(bool);
   function updateToCommitState(uint8 _state) external;
+
+  // passenger functions
 }
 
 
