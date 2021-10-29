@@ -5,7 +5,7 @@ const FlightSuretyApp = artifacts.require('FlightSuretyApp')
 const { toWei, fromWei } = require('../utils/conversion')
 
 
-let flightSuretyApp, flightSuretyData, flightSuretyDataAddress,  deployer, addr1, addr2, addr3, addr4, addr5, addr6, addr7, addr8, addr9, airlineName, id, state, airlines
+let flightSuretyApp, flightSuretyData, flightSuretyDataAddress,  deployer, addr1, addr2, addr3, addr4, addr5, addr6, addr7, addr8, addr9,  airlineName, id, state, airlines
 
 
 contract('FlightSuretyApp', async payloadAccounts => {
@@ -19,6 +19,10 @@ contract('FlightSuretyApp', async payloadAccounts => {
   addr7 = payloadAccounts[7]
   addr8 = payloadAccounts[8]
   addr9 = payloadAccounts[9]
+
+
+
+
 
   
 
@@ -239,9 +243,24 @@ contract('FlightSuretyApp', async payloadAccounts => {
       console.log({state})
 
       console.log('passenger balance, ', fromWei(passengerBalance))
- 
+    })
 
+  }) 
+
+  contract('Oracle Registration', () => {
+    it('Tests oracle registration', async () => {
+      const ORACLE_REGISTRATION_FEE = await flightSuretyApp.ORACLE_REGISTRATION_FEE.call()
+      const isRegisteredBefore = await flightSuretyApp.isOracleRegistered(payloadAccounts[20])
+      console.log('oracle state', isRegisteredBefore)
+      assert.isFalse(isRegisteredBefore)
+  
+      await flightSuretyApp.registerOracle({value: ORACLE_REGISTRATION_FEE, from: payloadAccounts[20]})
     
+      const isRegistered = await flightSuretyApp.isOracleRegistered(payloadAccounts[20])
+      
+      console.log('oracle state', isRegistered)
+
+      assert.isTrue(isRegistered)
     })
 
   }) 

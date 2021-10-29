@@ -7,10 +7,6 @@ contract FlightSuretyData {
   using SafeMath for uint256;
   
   
-  
- 
-
-
   /********************************************************************************************/
   /*                                       DATA VARIABLES                                     */
   /********************************************************************************************/
@@ -76,9 +72,6 @@ contract FlightSuretyData {
   }
   
   
-  
-  
-  
   modifier checkRegistration(address _account) {
     this.onlyRegisteredAirlines(_account);
     _;
@@ -116,10 +109,8 @@ contract FlightSuretyData {
     operational = true;
 
   }
-  
-  
-  
-    /********************************************************************************************/
+    
+  /********************************************************************************************/
   /*                                       CORE FUNCTIONS                                 */
   /********************************************************************************************/
   function setOperatinalStatus(bool _status) external onlyOwner {
@@ -189,11 +180,6 @@ contract FlightSuretyData {
     require(operational != _status, 'already in operational mode');
     operational = _status;
   }
-
- 
-
-
-
 
   /********************************************************************************************/
   /*                                       AIRLINE UTILITY FUNCTIONS                                 */
@@ -266,6 +252,20 @@ contract FlightSuretyData {
     
     return checkStatus;
   }
+
+  function isAirlineCommitted(address _account) external view returns(bool checkStatus) {
+    uint8 airlineCheck = uint8(airlines[_account].status);
+    if(airlineCheck == 3) {
+        
+      checkStatus = true;
+    } else {
+      checkStatus = false;
+    }
+    
+    return checkStatus;
+  
+
+  }
   
   function getTotalRegisteredAirlines() external view returns(uint256) {
     return totalRegisteredAirlines;
@@ -279,10 +279,6 @@ contract FlightSuretyData {
   function getAirlineBalance(address _account) external view returns(uint256) {
     return _account.balance;
   }
-
-
-
-  
 
 
   /*__________________________________PASSENGER_______________________________*/
@@ -320,9 +316,6 @@ contract FlightSuretyData {
   event LogPassengerInsurance(address indexed account, uint256 amount);
 
 
-
-
-
   /*******************************************************************************************/
   /*                                       PASSENGER FUNCTIONS                         */
   /*****************************************************************************************/
@@ -348,17 +341,6 @@ contract FlightSuretyData {
 
     emit LogPassengerInsurance(msg.sender, passengersInsurance[msg.sender].amount);
   }
-
-    // struct Insurance {
-  //   uint256 id;
-  //   address flightAddress;
-  //   address passenger;
-  //   string flight;
-  //   uint256 amount;
-  //   PassengerInsuranceState state;
-  //   uint256 refundAmount;
-  // }
-
 
   /*******************************************************************************************/
   /*                                       PASSENGER UTILITY FUNCTIONS                         */
@@ -401,8 +383,6 @@ contract FlightSuretyData {
   function getPassengerBalance(address _account) external view returns(uint256) {
     return passengersInsurance[_account].amount;
   }
-
-
 
   /********************************************************************************************/
   /*                                      CONTRACT RECEIVE ETHER                                */
