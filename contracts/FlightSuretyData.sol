@@ -2,290 +2,245 @@
 pragma solidity ^0.8.0;
 
 import '@openzeppelin/contracts/utils/math/SafeMath.sol';
+import './AirlineData.sol';
 
-contract FlightSuretyData {
+contract FlightSuretyData is AirlineData {
   using SafeMath for uint256;
-  
+
+
   
   /********************************************************************************************/
-  /*                                       DATA VARIABLES                                     */
-  /********************************************************************************************/
+  /*                                      FLIGHT STATE VARIABLES                          */
+  /******************************************************************************************/
 
-  uint256 totalAppliedAirlines;
-  
-  address private contractOwner;
-  bool private operational;
-    
-  uint256 totalRegisteredAirlines;
-  enum AirlineStatus { 
-    Unassigned,
-    Applied,
-    Registered,
-    Committed
-  }
 
-  struct Airline {
+  // Flight status codes
+  uint8 private constant STATUS_CODE_UNKNOWN = 0;
+  uint8 private constant STATUS_CODE_ON_TIME = 10;
+  uint8 private constant STATUS_CODE_LATE_AIRLINE = 20;
+  uint8 private constant STATUS_CODE_LATE_WEATHER = 30;
+  uint8 private constant STATUS_CODE_LATE_TECHNICAL = 40;
+  uint8 private constant STATUS_CODE_LATE_OTHER = 50;
+
+  uint256 public flightCounter = 0;
+
+
+  struct Flight {
     uint256 id;
-    string name;
-    AirlineStatus status;
-    address airlineAccount;
+    address airline;
+    string flightName;
+    uint8 statusCode;
+    bytes32 flightKey;
+    uint256 timestamp;
+
   }
 
+  mapping(bytes32 => Flight) private flights;
 
-
-  mapping(address => Airline) airlines;
-  
-  // mapping(AirlineStatus => uint256) public registeredAirlines;
-  
-
-  
-  mapping(address => uint256) paidAirlines;
-  
-
+  mapping(uint256 => bytes32) public flightKeys;
 
   /********************************************************************************************/
-  /*                                       FUNCTION MODIFIERS                                 */
+  /*                                      FLIGHT EVENTS                                      */
+  /******************************************************************************************/
+
+  event LogFlightRegistered(bytes32 flightKey, address indexed airline, uint256 timestamp, uint8 statusCode);
+  event LogFlightStatusProcessed(address indexed airline, uint256 timestamp);
+
+   // Event fired when flight status request is requested
+  event LogOracleRequest(uint8 index, address airline, string flight, uint256 timestamp);
+
   /********************************************************************************************/
- 
+  /*                                      FLIGHT CORE FUNCTIONS                 */
+  /******************************************************************************************/
   
- 
+  // Register flight
+  function registerFlight(uint8 _statusCode) public {
+    (bool checkStatus ) = this.isAirlineCommitted(msg.sender);
+    require(checkStatus == true, 'airline not commited');
 
-  function _onlyOwner() internal view {
-    require(msg.sender == contractOwner, 'caller not owner');
-  }
-  
-  function onlyAuthorizedAirlines(address _account) external view {
-     require(_account == contractOwner || airlines[_account].status == AirlineStatus.Applied || airlines[_account].status == AirlineStatus.Registered, 'airline not authorized');
-  }
-  
-  function onlyRegisteredAirlines(address _account) external view {
-      require(airlines[_account].status == AirlineStatus.Registered, 'caller not registered');
-  }
-  
-  function onlyAuthorizeRegistrants(address _account) external view {
-      require(airlines[_account].status == AirlineStatus.Registered || _account == contractOwner, 'not authorized to register');
-  }
-  
-  modifier checkCaller(address _account) {
-      this.onlyAuthorizeRegistrants(_account);
-      _;
-  }
-  
-  
-  modifier checkRegistration(address _account) {
-    this.onlyRegisteredAirlines(_account);
-    _;
-  }
-  
+    (uint256 id, string memory name, address airlineAccount,) = this.getAirlineDetails(msg.sender);  
 
-  modifier onlyOwner() {
-    _onlyOwner();
-    _;
-  }
-  
-  modifier onlyAuthorized(address _account) {
-    this.onlyAuthorizedAirlines(_account);
-      _;
-  }
-
-  modifier isOperational() {
-    require(operational, 'contract not operational');
-    _;
-  }
-
- 
-
- 
-  /********************************************************************************************/
-  /*                                       EVENTS                                */
-  /********************************************************************************************/
-
-  event LogCreatedAirline(address indexed account, uint256 timestamp, string airlineStatus);
-  event LogStatusUpdated(address indexed account, string airlineStatus);
-
-
-  constructor() {
-    contractOwner = msg.sender;
-    operational = true;
-
-  }
+    flightCounter = flightCounter.add(1);
     
-  /********************************************************************************************/
-  /*                                       CORE FUNCTIONS                                 */
-  /********************************************************************************************/
-  function setOperatinalStatus(bool _status) external onlyOwner {
-    require(operational != _status, 'must not be current status');
-    operational = _status;
-  }
 
+    bytes32 flightKey = generateFlightKey(msg.sender, block.timestamp);
 
-  function createNewAirline(string memory _name, address _account) external {
-    require(airlines[_account].status == AirlineStatus.Unassigned, 'airline not in unassigned state');
-    totalAppliedAirlines = totalAppliedAirlines.add(1);
-    airlines[_account] = Airline({
-      id: totalAppliedAirlines,
-      name: _name,
-      status: AirlineStatus.Applied, 
-      airlineAccount: _account
+    flightKeys[id] = flightKey;
+  
+
+    flights[flightKey] = Flight({
+      id: id,
+      airline: airlineAccount,
+      flightName: name,
+      statusCode: _statusCode,
+      flightKey: flightKey,
+      timestamp: block.timestamp
     });
-    
-    string memory state;
-    (,,,state) = this.getAirlineDetails(_account);
 
-    emit LogCreatedAirline(msg.sender, block.timestamp, state);
-   
+    emit LogFlightRegistered(flightKey, msg.sender, block.timestamp, _statusCode);
+  }
+
+  function processFlightStatus(address _airline, uint256 _timestamp, uint8 _statusCode)  private {
+    bytes32 key = generateFlightKey(_airline, _timestamp);
+    flights[key].statusCode = _statusCode;
+
+    emit LogFlightStatusProcessed(_airline, _timestamp);
+  }
+
+  // Generate a request for oracles  to fetch flight information
+  function fetchFlightStatus(address _airline, uint256 _timestamp) public {
+    uint8 index = getRandomIndex(msg.sender);
+
+    // Generate a unique key for storing  the request
+    bytes32 key = keccak256(abi.encodePacked(index, _airline, _timestamp));
+    oracleResponses[key].requester = msg.sender;
+    oracleResponses[key].isOpen = true;
+
+  
+    (,string memory name,,) = this.getAirlineDetails(_airline); 
+
+    emit LogOracleRequest(index, _airline, name, _timestamp);
+
+  }
+
+  // Get flight details
+  function getFlightDetails(uint256 _flightId) public view returns
+    (
+      uint256 id, 
+      address airline, 
+      string memory flightName,
+      uint8 statusCode, 
+      bytes32 flightKey, 
+      uint256 timestamp
+
+    )
+  {
+    require(_flightId != 0 || _flightId <= flightCounter, 'invalid flight id');
+    bytes32 key = flightKeys[_flightId];
+    id = flights[key].id;
+    airline = flights[key].airline;
+    flightName = flights[key].flightName;
+    statusCode = flights[key].statusCode;
+    flightKey = flights[key].flightKey;
+    timestamp = flights[key].timestamp;
+    
   }
   
-  
-  function updateAirlineStatus(address _account, uint8 _state) external onlyAuthorized(_account) isOperational {
-    uint8 statusNum = uint8(airlines[_account].status);
-    require(_state <= 3, 'not within enum range');
-    require(_state > statusNum, 'status cannot be lower than current state');
-    disableOperational();
-    airlines[_account].status = AirlineStatus(_state);
-    totalRegisteredAirlines = totalRegisteredAirlines.add(1);
-    
-    statusNum = uint8(airlines[_account].status);
-  
-    
-    
-    string memory state;
-    (,,,state) = this.getAirlineDetails(_account);
-    emit LogStatusUpdated(_account, state);
-  }
-    
+  /********************************************************************************************/
+  /*                                      FLIGHT UTILITY FUNCTIONS                 */
+  /******************************************************************************************/
 
-  // update airline state to committed
-  function updateToCommitState(uint8 _state) external checkCaller(tx.origin) payable {
-    uint8 statusNum = uint8(airlines[tx.origin].status);
-    require(_state <= 3, 'not within enum range');
-    require(_state > statusNum, 'status cannot be lower than current state');
+  function generateFlightKey(address _airline, uint256 _timestamp) public pure returns(bytes32) {
+    return keccak256(abi.encodePacked(_airline, _timestamp));
+  }
+
+
+  /*__________________________________ORACLE______________________________*/
+
+  
+  /********************************************************************************************/
+  /*                               ORACLE STATE VARIABLES                                    */
+  /******************************************************************************************/
+
+  uint8 private nonce = 0;
+
+
+  // Number of oracles that must respond for valid status
+  uint256 private constant  MIN_RESPONSES = 3;
+
+  struct Oracle {
+    bool isRegistered;
+    uint8[3] indexes;
+  }
+
+  // Track all registered oracles
+  mapping(address => Oracle) private oracles; 
+
+  // Model for responses from oracles
+  struct ResponseInfo {
+    address requester;  // account that triggered the requested status
+    bool isOpen;        // if open, oracle responses are accepted
+    mapping(uint8 => address[]) responses; // key is the status code reported
+  }
+
+  // Track all oracle responses 
+  mapping(bytes32 => ResponseInfo) oracleResponses;
+
+
+  /********************************************************************************************/
+  /*                                      EVENTS                                             */
+  /******************************************************************************************/
+
+  // Event fired each time an oracle submits a response
+  event LogFlightStatusInfo(address airline, string flight, uint256 timestamp, uint8 status);
+
+  event LogOracleReport(address airline, string flight, uint256 timestamp, uint8 status);
+
+ 
+
+
         
-    airlines[tx.origin].status = AirlineStatus.Committed;
-         
-    string memory state;
-    (,,,state) = this.getAirlineDetails(tx.origin);
-    emit LogStatusUpdated(tx.origin, state);
-  }
-  
-  
-  function disableOperational() public {
-    if(totalRegisteredAirlines >= 4) {
-      operational = false; 
-    }
-  }
-  
-  
-  function enableOperationalStatus(bool _status) checkRegistration(tx.origin) external {
-    require(operational != _status, 'already in operational mode');
-    operational = _status;
+  /********************************************************************************************/
+  /*                                      ORACLE CORE FUNCTIONS                              */
+  /******************************************************************************************/
+  function registerOracle() external payable {
+    // require(msg.value == ORACLE_REGISTRATION_FEE, 'oracle reg. fee required');
+    require(!oracles[tx.origin].isRegistered, 'oracle already registered');
+    uint8[3] memory indexes = generateIndexes(tx.origin);
+    oracles[tx.origin] = Oracle({
+      isRegistered: true,
+      indexes: indexes
+    });
+
   }
 
   /********************************************************************************************/
-  /*                                       AIRLINE UTILITY FUNCTIONS                                 */
-  /********************************************************************************************/
+  /*                                      ORACLE UTILITY FUNCTIONS                           */
+  /******************************************************************************************/
 
-  function getOperationalStatus() external view  returns(bool) {
-    return operational;
-  }
+  function getRandomIndex(address _account) internal returns(uint8) {
+    uint8 maxValue = 10;
+    uint8 random  = uint8(uint256(keccak256(abi.encodePacked(blockhash(block.number - nonce++), _account))) % maxValue);
 
-
-  function getOwner() external view returns(address) {
-    return contractOwner;
-  }
-  
-  
-  
-  function getTotalAppliedAirlines() external view returns(uint256) {
-      return totalAppliedAirlines;
-  }
-  
-  function getAirlineAuthorizationStatus(address _account) external view returns(bool status) {
-    if(airlines[_account].status == AirlineStatus.Applied) {
-        return status = true;
-        
-    } else if(airlines[_account].status == AirlineStatus.Registered) {
-        return status = true;
-    } else {
-        return status = false;
+    if(nonce > 250) {
+      nonce = 0;
     }
+
+    return random;
   }
+  
+  // Return non-duplicating integers
+  function generateIndexes(address _account) internal returns(uint8[3] memory) {
+    uint8[3] memory indexes;
+    indexes[0] = getRandomIndex(_account);
 
-  function getAirlineDetails(address _account) external view returns(uint256 id, string memory name, address airlineAccount, string memory state) {
-    uint8 airlineState = uint8(airlines[_account].status);
-    if(airlineState == 0) {
-      state = 'Unassigned';
 
-    } else if(airlineState == 1) {
-      state = 'Applied';
-    } else if(airlineState == 2) {
-      state = 'Registered';
-    } else if(airlineState == 3) {
-      state = 'Committed';
-
+    while(indexes[1] == indexes[0]) {
+      indexes[1] = getRandomIndex(_account);
     }
-    
-    id = airlines[_account].id;
-    name = airlines[_account].name;
-    airlineAccount = airlines[_account].airlineAccount;
-    
-    return (id, name, airlineAccount, state);
-    
-  }
-  
-  
-  
-  function getAirlineApplicationStatus(address _account) public view returns(string memory status) {
-    (,,,status) = this.getAirlineDetails(_account);
-  }
-  
-  
-  
-  function isAirlineRegistered(address _account) external view returns(bool checkStatus) {
-    uint8 airlineCheck = uint8(airlines[_account].status);
-    if(airlineCheck == 2) {
-        
-      checkStatus = true;
-    } else {
-      checkStatus = false;
+
+    while((indexes[2] == indexes[0]) || (indexes[2] == indexes[1])) {
+      indexes[2] =  getRandomIndex(_account);
     }
-    
-    return checkStatus;
+
+    return indexes;
   }
 
-  function isAirlineCommitted(address _account) external view returns(bool checkStatus) {
-    uint8 airlineCheck = uint8(airlines[_account].status);
-    if(airlineCheck == 3) {
-        
-      checkStatus = true;
-    } else {
-      checkStatus = false;
-    }
-    
-    return checkStatus;
-  
+  function getOracleIndexes() external view returns(uint8[3] memory) {
+    require(oracles[msg.sender].isRegistered, 'caller not registered oracle');
+    return oracles[msg.sender].indexes;
 
   }
-  
-  function getTotalRegisteredAirlines() external view returns(uint256) {
-    return totalRegisteredAirlines;
-  }
 
-
-   function getDataBalance() external view returns(uint256) {
-    return address(this).balance;
+  function isOracleRegistered(address _account) public view returns(bool) {
+    return oracles[_account].isRegistered;
   }
-  
-  function getAirlineBalance(address _account) external view returns(uint256) {
-    return _account.balance;
-  }
-
 
   /*__________________________________PASSENGER_______________________________*/
 
 
   /********************************************************************************************/
-  /*                                       STATE VARIABLE FUNCTIONS                            */
+  /*                                      PASSENGER STATE VARIABLE FUNCTIONS                            */
   /********************************************************************************************/
 
   enum PassengerInsuranceState {
@@ -320,10 +275,19 @@ contract FlightSuretyData {
   /*                                       PASSENGER FUNCTIONS                         */
   /*****************************************************************************************/
 
-  function payInsurance(address _account)  external payable {
-    require(airlines[_account].status == AirlineStatus.Committed, 'flight does not exist');
-    require(passengersInsurance[tx.origin].state == PassengerInsuranceState.Unassigned, 'insurance exits');
-    (uint256 id, string memory name, address airlineAccount,) = this.getAirlineDetails(_account);
+  function payInsurance(uint256 _flightId)  external payable {
+
+    require(_flightId != 0 || _flightId <= flightCounter, 'invalid flight id');
+
+    bytes32 key = flightKeys[_flightId];
+    require(_flightId == flights[key].id, "flight does not exist");
+
+
+    
+    
+    // require(airlines[_account].status == AirlineStatus.Committed, 'flight does not exist');
+    // require(passengersInsurance[tx.origin].state == PassengerInsuranceState.Unassigned, 'insurance exits');
+    (uint256 id, string memory name, address airlineAccount,) = this.getAirlineDetails(flights[key].airline);
 
     require(msg.value <= PASSENGER_INSURANCE_FEE, '1ETH insurance must be paid');
     (bool send, ) = address(this).call{value: msg.value}('');
@@ -383,6 +347,8 @@ contract FlightSuretyData {
   function getPassengerBalance(address _account) external view returns(uint256) {
     return passengersInsurance[_account].amount;
   }
+
+
 
   /********************************************************************************************/
   /*                                      CONTRACT RECEIVE ETHER                                */
