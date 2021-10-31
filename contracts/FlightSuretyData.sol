@@ -83,18 +83,17 @@ contract FlightSuretyData is AirlineData {
   }
 
   // Generate a request for oracles  to fetch flight information
-  function fetchFlightStatus(address _airline, uint256 _timestamp) public {
-    uint8 index = getRandomIndex(msg.sender);
+  function fetchFlightStatus(address _airline, uint256 _timestamp, uint8 _index) external {
+    // uint8 index = getRandomIndex(msg.sender);
 
     // Generate a unique key for storing  the request
-    bytes32 key = keccak256(abi.encodePacked(index, _airline, _timestamp));
-    oracleResponses[key].requester = msg.sender;
+    bytes32 key = keccak256(abi.encodePacked(_index, _airline, _timestamp));
+    oracleResponses[key].requester = tx.origin;
     oracleResponses[key].isOpen = true;
 
-  
     (,string memory name,,) = this.getAirlineDetails(_airline); 
 
-    emit LogOracleRequest(index, _airline, name, _timestamp);
+    emit LogOracleRequest(_index, _airline, name, _timestamp);
 
   }
 
@@ -130,16 +129,14 @@ contract FlightSuretyData is AirlineData {
   }
 
 
+
+
   /*__________________________________ORACLE______________________________*/
 
   
   /********************************************************************************************/
   /*                               ORACLE STATE VARIABLES                                    */
   /******************************************************************************************/
-
-  uint8 private nonce = 0;
-
-
   // Number of oracles that must respond for valid status
   uint256 private constant  MIN_RESPONSES = 3;
 
@@ -163,62 +160,35 @@ contract FlightSuretyData is AirlineData {
 
 
   /********************************************************************************************/
-  /*                                      EVENTS                                             */
+  /*                                    ORACLE  EVENTS                                             */
   /******************************************************************************************/
+  event LogOracleRegistered(address indexed oracle, uint8[3] indexes);
 
   // Event fired each time an oracle submits a response
   event LogFlightStatusInfo(address airline, string flight, uint256 timestamp, uint8 status);
 
   event LogOracleReport(address airline, string flight, uint256 timestamp, uint8 status);
 
-
-        
   /********************************************************************************************/
   /*                                      ORACLE CORE FUNCTIONS                              */
   /******************************************************************************************/
-  function registerOracle() external payable {
+  function registerOracle(uint8[3] memory _indexes) external payable {
+
     // require(msg.value == ORACLE_REGISTRATION_FEE, 'oracle reg. fee required');
-    require(!oracles[tx.origin].isRegistered, 'oracle already registered');
-    uint8[3] memory indexes = generateIndexes(tx.origin);
+    require(!oracles[tx.origin].isRegistered, 'OR. registered');
+    require(_indexes.length == 3, 'IND. Req');
     oracles[tx.origin] = Oracle({
       isRegistered: true,
-      indexes: indexes
+      indexes: _indexes
     });
+
+    emit LogOracleRegistered(tx.origin, _indexes);
 
   }
 
   /********************************************************************************************/
   /*                                      ORACLE UTILITY FUNCTIONS                           */
   /******************************************************************************************/
-
-  function getRandomIndex(address _account) internal returns(uint8) {
-    uint8 maxValue = 10;
-    uint8 random  = uint8(uint256(keccak256(abi.encodePacked(blockhash(block.number - nonce++), _account))) % maxValue);
-
-    if(nonce > 250) {
-      nonce = 0;
-    }
-
-    return random;
-  }
-  
-  // Return non-duplicating integers
-  function generateIndexes(address _account) internal returns(uint8[3] memory) {
-    uint8[3] memory indexes;
-    indexes[0] = getRandomIndex(_account);
-
-
-    while(indexes[1] == indexes[0]) {
-      indexes[1] = getRandomIndex(_account);
-    }
-
-    while((indexes[2] == indexes[0]) || (indexes[2] == indexes[1])) {
-      indexes[2] =  getRandomIndex(_account);
-    }
-
-    return indexes;
-  }
-
   function getOracleIndexes() external view returns(uint8[3] memory) {
     require(oracles[msg.sender].isRegistered, 'caller not registered oracle');
     return oracles[msg.sender].indexes;
@@ -229,6 +199,11 @@ contract FlightSuretyData is AirlineData {
     return oracles[_account].isRegistered;
   }
 
+ 
+
+
+  
+ 
   /*__________________________________PASSENGER_______________________________*/
 
 

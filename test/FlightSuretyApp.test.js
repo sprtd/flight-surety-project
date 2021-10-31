@@ -297,18 +297,20 @@ contract('FlightSuretyApp', async payloadAccounts => {
 
   contract('Oracle', () => {
     it('Tests oracle registration', async () => {
+      const dataBalanceBefore = await web3.eth.getBalance(flightSuretyDataAddress)
       const ORACLE_REGISTRATION_FEE = await flightSuretyApp.ORACLE_REGISTRATION_FEE.call()
       const isRegisteredBefore = await flightSuretyData.isOracleRegistered(payloadAccounts[20])
       console.log('oracle state', isRegisteredBefore)
       assert.isFalse(isRegisteredBefore)
 
-  
+      
       await flightSuretyApp.payOracleRegFees({value: ORACLE_REGISTRATION_FEE, from: payloadAccounts[20]})
-    
+      const dataBalanceAfter = await web3.eth.getBalance(flightSuretyDataAddress)
+      
       const isRegistered = await flightSuretyData.isOracleRegistered(payloadAccounts[20])
       
       console.log('oracle state', isRegistered)
-
+      
       assert.isTrue(isRegistered)
 
 
@@ -321,12 +323,24 @@ contract('FlightSuretyApp', async payloadAccounts => {
       } catch(err) {
         assert(err.message.startsWith(REVERT), `Expected ${REVERT} but got ${err.message} instead`) 
       } 
-
+      
 
       //  Allow only-registered-oracle attempt to get oracle indexes
       const oracleIndexes = await flightSuretyData.getOracleIndexes({from: payloadAccounts[20]})
 
       console.log('oracle indexes', oracleIndexes)
+
+
+      //  Allow only-registered-oracle attempt to get oracle indexes
+
+      console.log('dataContract balance before', dataBalanceBefore)
+      console.log('dataContract balance after', dataBalanceAfter)
+
+      const ethDiff = dataBalanceAfter - dataBalanceBefore
+      console.log('eth diff', fromWei(ethDiff.toString()))
+      assert.equal(fromWei(ORACLE_REGISTRATION_FEE), fromWei(ethDiff.toString())) // difference between data contract's initial ETH balance and data contract's final ETH balance equals amount paid by oracle
+
+
     })
   }) 
 })

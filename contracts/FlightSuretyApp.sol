@@ -163,14 +163,28 @@ contract FlightSuretyApp {
   function getQuorum() public view returns(uint) {
     return quorum;
   }
+  
+   /*__________________________________FLIGHT_______________________________*/
 
+  /********************************************************************************************/
+  /*                                       FLIGHT FUNCTIONS                        */
+  /********************************************************************************************/
 
+  function fetchFlightStatus() public {
+    uint8 index = getRandomIndex(msg.sender);
 
+    iFlightSuretyData.fetchFlightStatus(msg.sender, block.timestamp, index);
+  }
+ 
+
+  /*__________________________________ORACLE_______________________________*/
 
   /********************************************************************************************/
   /*                                       ORACLE VARIABLES                         */
   /********************************************************************************************/
   uint256 public constant ORACLE_REGISTRATION_FEE = 1 ether;
+  uint8 private nonce = 0;
+
 
 
 
@@ -182,8 +196,45 @@ contract FlightSuretyApp {
     (bool sent, ) = flightSuretyDataAddress.call{value: msg.value}('');
     require(sent, 'SEND FAILED');
     
-    iFlightSuretyData.registerOracle();
+    uint8[3] memory indexes = generateIndexes(msg.sender);
+    iFlightSuretyData.registerOracle(indexes);
   }
+
+
+  /********************************************************************************************/
+  /*                                      ORACLE UTILITY FUNCTIONS                           */
+  /******************************************************************************************/
+
+  function getRandomIndex(address _account) internal returns(uint8) {
+    uint8 maxValue = 10;
+    uint8 random  = uint8(uint256(keccak256(abi.encodePacked(blockhash(block.number - nonce++), _account))) % maxValue);
+
+    if(nonce > 250) {
+      nonce = 0;
+    }
+
+    return random;
+  }
+  
+  // Return non-duplicating integers
+  function generateIndexes(address _account) internal returns(uint8[3] memory) {
+    uint8[3] memory indexes;
+    indexes[0] = getRandomIndex(_account);
+
+
+    while(indexes[1] == indexes[0]) {
+      indexes[1] = getRandomIndex(_account);
+    }
+
+    while((indexes[2] == indexes[0]) || (indexes[2] == indexes[1])) {
+      indexes[2] =  getRandomIndex(_account);
+    }
+
+    return indexes;
+  }
+
+
+
 
 }
 
@@ -210,9 +261,12 @@ interface IFlightSuretyData {
   function updateToCommitState(uint8 _state) external;
   function isAirlineCommitted(address _account) external view returns(bool checkStatus);
 
+  // flight functions
+  function fetchFlightStatus(address _airline, uint256 _timestamp, uint8 _index) external;
+
 
   // oracle functions
-  function registerOracle() external payable;
+  function registerOracle(uint8[3] memory _indexes) external payable;
 
 }
 

@@ -39,7 +39,6 @@ const startServer = async () => {
     const accounts = await web3.eth.getAccounts()
 
     /* Network & Contract Config ************************ */
-
     const networkId = await web3.eth.net.getId()
     const  deployedNetworkData = await FlightSuretyData.networks[networkId]
     const  deployedNetworkApp = await FlightSuretyApp.networks[networkId]
@@ -66,9 +65,15 @@ const startServer = async () => {
 
 
 const registerOracles = async () => {
-  let oracleFee = await flightSuretyApp.methods.ORACLE_REGISTRATION_FEE().call()
-  oracleFee = oracleFee.toString()
-  console.log({oracleFee})
+  try {
+    let oracleFee = await flightSuretyApp.methods.ORACLE_REGISTRATION_FEE().call()
+    oracleFee = oracleFee.toString()
+    console.log({oracleFee})
+
+  } catch(err) {
+    console.log(err)
+  }
+ 
 
 }
 
@@ -77,9 +82,6 @@ startServer().then(res =>  {
   console.log(res)
 })
 
-
-
-  
 
 const PORT = process.env.PORT
 app.listen(PORT, () => console.log(`server running on port ${PORT}`))
