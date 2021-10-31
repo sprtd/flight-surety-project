@@ -331,11 +331,12 @@ contract('FlightSuretyApp', async payloadAccounts => {
       console.log('oracle indexes', oracleIndexes)
 
 
-      //  Allow only-registered-oracle attempt to get oracle indexes
-
+      // Only registered-oracle can get oracle indexes
       console.log('dataContract balance before', dataBalanceBefore)
       console.log('dataContract balance after', dataBalanceAfter)
 
+
+      // data contract balance check after oracle registration
       const ethDiff = dataBalanceAfter - dataBalanceBefore
       console.log('eth diff', fromWei(ethDiff.toString()))
       assert.equal(fromWei(ORACLE_REGISTRATION_FEE), fromWei(ethDiff.toString())) // difference between data contract's initial ETH balance and data contract's final ETH balance equals amount paid by oracle
