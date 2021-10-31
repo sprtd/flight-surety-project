@@ -310,6 +310,23 @@ contract('FlightSuretyApp', async payloadAccounts => {
       console.log('oracle state', isRegistered)
 
       assert.isTrue(isRegistered)
+
+
+      // Revert non-registered oracle attempt to get oracle indexes
+      const REVERT  = 'Returned error: VM Exception while processing transaction: revert caller not registered oracle'
+      
+      try {
+        await flightSuretyData.getOracleIndexes({from: payloadAccounts[19]})
+        throw null
+      } catch(err) {
+        assert(err.message.startsWith(REVERT), `Expected ${REVERT} but got ${err.message} instead`) 
+      } 
+
+
+      //  Allow only-registered-oracle attempt to get oracle indexes
+      const oracleIndexes = await flightSuretyData.getOracleIndexes({from: payloadAccounts[20]})
+
+      console.log('oracle indexes', oracleIndexes)
     })
   }) 
 })

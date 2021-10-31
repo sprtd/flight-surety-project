@@ -7,12 +7,9 @@ import './AirlineData.sol';
 contract FlightSuretyData is AirlineData {
   using SafeMath for uint256;
 
-
-  
   /********************************************************************************************/
   /*                                      FLIGHT STATE VARIABLES                          */
   /******************************************************************************************/
-
 
   // Flight status codes
   uint8 private constant STATUS_CODE_UNKNOWN = 0;
@@ -23,8 +20,6 @@ contract FlightSuretyData is AirlineData {
   uint8 private constant STATUS_CODE_LATE_OTHER = 50;
 
   uint256 public flightCounter = 0;
-
-
   struct Flight {
     uint256 id;
     address airline;
@@ -176,8 +171,6 @@ contract FlightSuretyData is AirlineData {
 
   event LogOracleReport(address airline, string flight, uint256 timestamp, uint8 status);
 
- 
-
 
         
   /********************************************************************************************/
@@ -309,9 +302,6 @@ contract FlightSuretyData is AirlineData {
   /*******************************************************************************************/
   /*                                       PASSENGER UTILITY FUNCTIONS                         */
   /*****************************************************************************************/
-
-  // mapping(address =>  Insurance) passengersInsurance;
-
   function getPassengerDetails(address _account) external view returns
     (
       uint256 id, 
@@ -347,6 +337,8 @@ contract FlightSuretyData is AirlineData {
   function getPassengerBalance(address _account) external view returns(uint256) {
     return passengersInsurance[_account].amount;
   }
+
+
 
 
 
