@@ -1,8 +1,8 @@
 require('dotenv').config()
 
 const express = require('express')
-const FlightSuretyData = require('./abi/FlightSuretyData.json')
-const FlightSuretyApp = require('./abi/FlightSuretyApp.json')
+const FlightSuretyData = require('../client/src/abi/FlightSuretyData.json')
+const FlightSuretyApp = require('../client/src/abi/FlightSuretyApp.json')
 
 const { KEY1, KEY2, KEY3, KEY4, KEY5, KEY6, KEY7, KEY8, KEY9, KEY10 } = process.env
 const privateKeys = [KEY1, KEY2, KEY3, KEY4, KEY5, KEY6, KEY7, KEY8, KEY9, KEY10 ];
@@ -17,7 +17,7 @@ const HDWalletProvider = require("@truffle/hdwallet-provider");
 const provider = new HDWalletProvider(privateKeys, "http://localhost:7545", 0, 5); //start at address_index 0 and load both addresses
 const web3 = new Web3(provider)
 
-let flightSuretyData, flightSuretyApp, 
+let flightSuretyData, flightSuretyApp
 
 const app = express()
 
@@ -55,7 +55,6 @@ const startServer = async () => {
         return oracleAddresses
       }
     }
-   
   } catch(err) {
     console.log(err)
   }
@@ -73,8 +72,8 @@ const registerOracles = async oracles => {
     await flightSuretyApp.methods.payOracleRegFees().send({value: oracleFee, from: oracles})
     const indexes = await getOracleIndex(oracles)
     console.log('indexes', indexes)
-
     oracleMetaData.push({ oracles, indexes, randomStatusCodes})
+
   } catch(err) {
     console.log(err)
   }
@@ -93,16 +92,14 @@ const getOracleIndex = async oracles => {
 
 startServer()
   .then(async oraclePayload =>  {
+    console.log('length fetched',oraclePayload.length)
+    for(i=0; i < oraclePayload.length; i++) {
+      const oracles = oraclePayload[i]
 
-  for(i=0; i < oraclePayload.length; i++) {
-    const oracles = oraclePayload[i]
-
-   balance =  await web3.eth.getBalance(oraclePayload[i])
-  
-   registerOracles(oracles)
-   console.log('oracle metadata', oracleMetaData)
-    
-  }
+      balance =  await web3.eth.getBalance(oraclePayload[i])
+      registerOracles(oracles)
+      console.log('oracle metadata', oracleMetaData)
+    }
 
   })
   .catch(err => console.log('error', err))

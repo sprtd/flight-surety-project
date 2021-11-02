@@ -222,7 +222,6 @@ contract('FlightSuretyApp', async payloadAccounts => {
 
       await flightSuretyApp.payCommitmentFee({value: AIRLINE_FEE, from: deployer})
 
-      
       await flightSuretyData.registerFlight(STATUS_CODE_ON_TIME, {from: deployer})
 
       const flight1Details = await flightSuretyData.getFlightDetails(1)

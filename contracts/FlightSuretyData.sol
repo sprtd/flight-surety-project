@@ -83,18 +83,22 @@ contract FlightSuretyData is AirlineData {
   }
 
   // Generate a request for oracles  to fetch flight information
-  function fetchFlightStatus(address _airline, uint256 _timestamp, uint8 _index) external {
+  function fetchFlightStatus(uint8 _index, uint256 _flightId) external {
+    (, address airline, string memory flightName,, bytes32 flightKey, uint256 timestamp) = getFlightDetails(_flightId);
+
+    require(flightKeys[_flightId] == flightKey, 'NE flight');
+
+
+
     // uint8 index = getRandomIndex(msg.sender);
 
     // Generate a unique key for storing  the request
-    bytes32 key = keccak256(abi.encodePacked(_index, _airline, _timestamp));
+    bytes32 key = keccak256(abi.encodePacked(_index, airline, timestamp));
     oracleResponses[key].requester = tx.origin;
     oracleResponses[key].isOpen = true;
 
-    (,string memory name,,) = this.getAirlineDetails(_airline); 
 
-    emit LogOracleRequest(_index, _airline, name, _timestamp);
-
+    emit LogOracleRequest(_index, airline, flightName, timestamp);
   }
 
   // Get flight details
@@ -127,8 +131,6 @@ contract FlightSuretyData is AirlineData {
   function generateFlightKey(address _airline, uint256 _timestamp) public pure returns(bytes32) {
     return keccak256(abi.encodePacked(_airline, _timestamp));
   }
-
-
 
 
   /*__________________________________ORACLE______________________________*/
@@ -165,16 +167,14 @@ contract FlightSuretyData is AirlineData {
   event LogOracleRegistered(address indexed oracle, uint8[3] indexes);
 
   // Event fired each time an oracle submits a response
-  event LogFlightStatusInfo(address airline, string flight, uint256 timestamp, uint8 status);
+  event LogFlightStatusInfo(address airline, string flight, uint256 timestamp, uint8 statusCode);
 
-  event LogOracleReport(address airline, string flight, uint256 timestamp, uint8 status);
+  event LogOracleReport(address airline, string airlineName, uint256 timestamp, uint8 status);
 
   /********************************************************************************************/
   /*                                      ORACLE CORE FUNCTIONS                              */
   /******************************************************************************************/
   function registerOracle(uint8[3] memory _indexes) external payable {
-
-    // require(msg.value == ORACLE_REGISTRATION_FEE, 'oracle reg. fee required');
     require(!oracles[tx.origin].isRegistered, 'OR. registered');
     require(_indexes.length == 3, 'IND. Req');
     oracles[tx.origin] = Oracle({
@@ -183,6 +183,35 @@ contract FlightSuretyData is AirlineData {
     });
 
     emit LogOracleRegistered(tx.origin, _indexes);
+  }
+  
+
+  /**
+    * @dev Called by oracle in response to an outstanding request
+    * response is only valid if there's a pending open request status  and  that its responxe index matches that which was assigned during oracle registration
+   */
+  function submitOracleResponse
+    (
+      uint8 _index, 
+      address _airline, 
+      string memory _airlineName, 
+      uint256 _timestamp, 
+      uint8 _statusCode
+    ) external 
+  {
+    require((oracles[msg.sender].indexes[0] == _index) || (oracles[msg.sender].indexes[1] == _index) || (oracles[msg.sender].indexes[2] == _index), 'IDX mismatch');
+    bytes32 key = keccak256(abi.encodePacked(_index, _airline, _airlineName, _timestamp));
+    require(oracleResponses[key].isOpen, 'Fli. or timest. mismatch');
+    oracleResponses[key].responses[_statusCode].push(msg.sender);
+
+    // oracle response is not valid until MIN_RESPONSES threshold is reached
+    emit LogOracleReport(msg.sender, _airlineName, _timestamp, _statusCode);
+    if(oracleResponses[key].responses[_statusCode].length >= MIN_RESPONSES) {
+      emit LogFlightStatusInfo(_airline, _airlineName, _timestamp, _statusCode);
+      processFlightStatus(_airline, _timestamp, _statusCode);
+    }
+
+
 
   }
 
@@ -200,9 +229,6 @@ contract FlightSuretyData is AirlineData {
   }
 
  
-
-
-  
  
   /*__________________________________PASSENGER_______________________________*/
 
@@ -244,14 +270,11 @@ contract FlightSuretyData is AirlineData {
   /*****************************************************************************************/
 
   function payInsurance(uint256 _flightId)  external payable {
-
     require(_flightId != 0 || _flightId <= flightCounter, 'invalid flight id');
 
     bytes32 key = flightKeys[_flightId];
     require(_flightId == flights[key].id, "flight does not exist");
 
-
-    
     
     // require(airlines[_account].status == AirlineStatus.Committed, 'flight does not exist');
     // require(passengersInsurance[tx.origin].state == PassengerInsuranceState.Unassigned, 'insurance exits');
@@ -312,9 +335,6 @@ contract FlightSuretyData is AirlineData {
   function getPassengerBalance(address _account) external view returns(uint256) {
     return passengersInsurance[_account].amount;
   }
-
-
-
 
 
   /********************************************************************************************/
