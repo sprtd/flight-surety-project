@@ -8,6 +8,7 @@ const Navbar = () => {
   const [toggleNav, setToggleNav] = useState(false)
 
   const handleToggle = () => setToggleNav(prev => !prev)
+ 
 
   return (
     <NavBarWrapper toggleNav={ toggleNav }>

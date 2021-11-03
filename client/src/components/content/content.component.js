@@ -12,6 +12,7 @@ import { ContentWrapper, DappContentWrapper, InputWrapper, OverviewWrapper, Prod
 import { toWei, fromWei } from '../../utils/conversion'
 
 const Content = () => {
+  let preAirline, postAirline, preFlightKey, postFlightKey
   const { productOverview,  flightSelected, productDetails } = useContext(TabsContext)
   const [formFlightId, setFormFlightId] = useState('')
   const [formPassengerAddress, setFormPassengerAddress] = useState('')
@@ -26,8 +27,21 @@ const Content = () => {
 
   // Register airline state
   const [formFlightStatusCode, setFormFlightStatusCode] = useState('')
+ 
+  // Pay insurance
+  const [formInsuranceCode, setFormInsuranceCode] = useState('')
 
   const { id: flightId, airline, flightName, statusCode, flightKey, timestamp } = flightResult
+
+  if(airline) {
+    preAirline = airline.substring(0, 6)
+    postAirline = airline.substring(37, 42)
+    preFlightKey = flightKey.substring(0, 6)
+    postFlightKey = flightKey.substring(37, 42)
+
+
+  }
+
 
   const { id, flightAddress, flightName: flightFetchedName, passenger, state, amount, refundAmount  } = passengerResult
 
@@ -44,6 +58,10 @@ const Content = () => {
     index: '', 
     flightID: ''
   }
+
+
+
+
 
 
   /* Fetch Flight Details ************************ */
@@ -105,11 +123,24 @@ const Content = () => {
     }
   }
 
+  /* Pay Insurance ************************ */
+  const payInsurance = async () => {
+    try {
+      await flightSuretyDataContract.methods.payInsurance(formInsuranceCode).send({ from: web3Account }) 
+    } catch(err) {
+      console.log(err)
+    }
+  }
+
   /* Handle Add Retailer ************************ */
   const initialFlightState = {
     id: '',
     address: ''
   }
+
+ 
+
+
 
   //  /* Handle Passenger Insurance ************************ */
   //  const [passengerInsurance, setPassengerInsurance] = useState(initialPassengerInsurance)
@@ -148,15 +179,15 @@ const Content = () => {
           <h3>Flight Overview</h3>
           { flightId ? <p>Flight ID: { flightId }</p> : null}
           { flightName ? <p>Flight Name: { flightName.toUpperCase() }</p> : null}
-          { airline ? <p>Flight Address:  { airline.substring(0, 20) }</p> : null}
-          { flightKey ? <p>Flight Key: { flightKey.substring(0, 20) }</p> : null}
+          { airline ? <p>Flight Address:  { `${preAirline}...${postAirline}` }</p> : null}
+          { flightKey ? <p>Flight Key: { `${preFlightKey}...${postFlightKey}` }</p> : null}
           { timestamp ? <p>Time: { Date(timestamp) }</p> : null}
           { statusCode ? <p>Status Code: { statusCode }</p> : null}
         </OverviewWrapper >
 
         <OverviewWrapper style={{display: productOverview ? 'flex' : 'none'}}>
           <h3>Passenger Overview</h3>
-          { flightName ? <p>Flight Name: { flightName }</p> : null }
+          { flightName ? <p>Flight Name: { flightName.toUpperCase() }</p> : null }
           { amount ? <p>Passenger Insurance Balance: { fromWei(amount) }ETH</p> : null}
           { passenger ? <p>Passenger Address { passenger.substring(0, 20) }</p> : null }
           { state ? <p>Passenger Status: { state }</p> : null }
@@ -202,17 +233,15 @@ const Content = () => {
         {/* Passenger ************************ ************************ ************************  */}
         <ProductWrapper style={{display: productDetails ? 'flex' : 'none'}}>
           <Tippy content={<ToolTip>Enter valid flight ID</ToolTip>}>
-            <input type="number" placeholder='Enter Flight ID' onChange={ '' } name='SKU' value={ '' } />
+            <input type="number" placeholder='Enter Flight ID' onChange={e => setFormInsuranceCode(e.target.value)}  value={ formInsuranceCode } />
           </Tippy>
-
-          <button onClick={ '' }>Pay Insurance</button>
+          <button onClick={ payInsurance }>Pay Insurance</button>
         </ProductWrapper>
 
         <ProductWrapper style={{display: productDetails ? 'flex' : 'none'}}>
           <Tippy content={<ToolTip>check insurance</ToolTip>}>
             <input type="number" placeholder='Enter Index' onChange={ '' } name='SKU' value={ '' } />
           </Tippy>
-
           <button onClick={ '' }>Check Insurance</button>
         </ProductWrapper>
 
