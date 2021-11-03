@@ -18,7 +18,7 @@ const Content = () => {
   const [flightResult, setFlightResult] = useState('')
   const [passengerResult, setPassengerResult] = useState('')
 
-  // add airline
+  // Add airline state
   const [formAirlineName, setFormAirlineName] = useState('')
   const [formAirlineAddress, setFormAirlineAddress] = useState('')
 
@@ -41,32 +41,18 @@ const Content = () => {
   }
 
 
-  /* Handle Passenger Insurance ************************ */
-  const [passengerInsurance, setPassengerInsurance] = useState(initialPassengerInsurance)
-  const handlePassengerInsuranceChange = e => {
-    const { name, value } = e.target
-    setPassengerInsurance(prev => ({...prev, [name]: value}))
-  }
-  
- 
-
-  /* Handle Fetch Flight Details ************************ */
+  /* Fetch Flight Details ************************ */
   const getFlightDetails = async () => {
     try {
       const fetchedFlightDetails = await flightSuretyDataContract.methods.getFlightDetails(formFlightId).call()
-      // const fetchedPassengerDetails = await flightSuretyDataContract.methods.getPassengerDetails(formFlightId).call()
       console.log('fetched details', fetchedFlightDetails)
       setFlightResult(fetchedFlightDetails)
-      // setPassengerResult(fetchedPassengerDetails)
-    
-
     } catch(err) {
       console.log(err)
     }
   }
 
-
-  /* Handle Fetch Passenger Details ************************ */
+  /* Fetch Passenger Details ************************ */
   const getPassengerDetails = async () => {
     try {
       const fetchedPassengerDetails = await flightSuretyDataContract.methods.getPassengerDetails(formPassengerAddress).call()
@@ -78,28 +64,32 @@ const Content = () => {
     }
   }
 
-    /* Handle Apply for Airline Details ************************ */
-    const applyForAirline = async () => {
-      try {
-        await flightSuretyAppContract.methods.startAirlineApplication(formAirlineName).send({ from: web3Account }) 
-      } catch(err) {
-        console.log(err)
-      }
+  /* Apply for Airline ************************ */
+  const applyForAirline = async () => {
+    try {
+      await flightSuretyAppContract.methods.startAirlineApplication(formAirlineName).send({ from: web3Account }) 
+    } catch(err) {
+      console.log(err)
     }
+  }
 
-
-     /* Handle Register Airline ************************ */
-     const registerAirline = async () => {
-      try {
-        await flightSuretyAppContract.methods.registerAirline(formAirlineAddress, 2).send({ from: web3Account }) 
-      } catch(err) {
-        console.log(err)
-      }
+    /* Register Airline ************************ */
+  const registerAirline = async () => {
+    try {
+      await flightSuretyAppContract.methods.registerAirline(formAirlineAddress, 2).send({ from: web3Account }) 
+    } catch(err) {
+      console.log(err)
     }
+  }
 
-
-
-
+  /* Pay Airline Commitment Fee ************************ */
+  const payAirlineCommitmentFee = async () => {
+    try {
+      await flightSuretyAppContract.methods.payCommitmentFee().send({ value: toWei(10), from: web3Account }) 
+    } catch(err) {
+      console.log(err)
+    }
+  }
 
   /* Handle Add Retailer ************************ */
   const initialFlightState = {
@@ -107,13 +97,12 @@ const Content = () => {
     address: ''
   }
 
-  const [retailer, setRetailer] = useState(initialFlightState)
-
-  const handleRetailerChange = e => {
-    const { name, value } = e.target
-    setRetailer(prev => ({...prev, [name]: value}))
-  }
-
+  //  /* Handle Passenger Insurance ************************ */
+  //  const [passengerInsurance, setPassengerInsurance] = useState(initialPassengerInsurance)
+  //  const handlePassengerInsuranceChange = e => {
+  //    const { name, value } = e.target
+  //    setPassengerInsurance(prev => ({...prev, [name]: value}))
+  //  }
   
   return (
     <ContentWrapper>
@@ -174,14 +163,16 @@ const Content = () => {
           <Tippy content={<ToolTip>Only applied/registered airlines can register</ToolTip>}>
             <input type="text" placeholder='Airline Address' onChange={e => setFormAirlineAddress(e.target.value) }  value={ formAirlineAddress } />
           </Tippy>
-         
           <button onClick={ registerAirline }>Register Airline</button>
         </InputWrapper>
 
+
+      
+        {/* Pay Airline */}
         <InputWrapper style={{display: flightSelected ? 'flex' : 'none'}}>
           <Tippy content={<ToolTip>Only registered airlines can pay flight commitment fee</ToolTip>}>
+            <button onClick={ payAirlineCommitmentFee }>Pay Commitment</button>
           </Tippy>
-          <button onClick={ '' }>Pay Commitment</button>
         </InputWrapper>
       
 
@@ -197,7 +188,7 @@ const Content = () => {
         {/* Passenger ************************ ************************ ************************  */}
         <ProductWrapper style={{display: productDetails ? 'flex' : 'none'}}>
           <Tippy content={<ToolTip>Enter valid flight ID</ToolTip>}>
-            <input type="number" placeholder='Enter Flight ID' onChange={ handleRetailerChange } name='SKU' value={ retailer.SKU } />
+            <input type="number" placeholder='Enter Flight ID' onChange={ '' } name='SKU' value={ '' } />
           </Tippy>
 
           <button onClick={ '' }>Pay Insurance</button>
@@ -205,7 +196,7 @@ const Content = () => {
 
         <ProductWrapper style={{display: productDetails ? 'flex' : 'none'}}>
           <Tippy content={<ToolTip>check insurance</ToolTip>}>
-            <input type="number" placeholder='Enter Index' onChange={ handleRetailerChange } name='SKU' value={ retailer.SKU } />
+            <input type="number" placeholder='Enter Index' onChange={ '' } name='SKU' value={ '' } />
           </Tippy>
 
           <button onClick={ '' }>Check Insurance</button>
@@ -214,9 +205,9 @@ const Content = () => {
       
         <ProductWrapper style={{display: productDetails ? 'flex' : 'none'}}>
           <Tippy content={<ToolTip>Enter valid flight id</ToolTip>}>
-            <input type="number" placeholder='Enter Index' onChange={ handleRetailerChange } name='SKU' value={ retailer.SKU } />
+            <input type="number" placeholder='Enter Index' onChange={ '' } name='SKU' value={ '' } />
           </Tippy>
-          <input type="number" placeholder='Enter Flight ID' onChange={ handleRetailerChange } name='SKU' value={ retailer.SKU } />
+          <input type="number" placeholder='Enter Flight ID' onChange={ '' } name='SKU' value={ '' } />
 
           <button onClick={ '' }>Fetch Flight Status</button>
         </ProductWrapper> 
