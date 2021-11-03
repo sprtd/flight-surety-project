@@ -22,6 +22,11 @@ const Content = () => {
   const [formAirlineName, setFormAirlineName] = useState('')
   const [formAirlineAddress, setFormAirlineAddress] = useState('')
 
+
+
+  // Register airline state
+  const [formFlightStatusCode, setFormFlightStatusCode] = useState('')
+
   const { id: flightId, airline, flightName, statusCode, flightKey, timestamp } = flightResult
 
   const { id, flightAddress, flightName: flightFetchedName, passenger, state, amount, refundAmount  } = passengerResult
@@ -91,6 +96,15 @@ const Content = () => {
     }
   }
 
+  /* Register Flight ************************ */
+  const registerFlight = async () => {
+    try {
+      await flightSuretyDataContract.methods.registerFlight(formFlightStatusCode).send({ from: web3Account }) 
+    } catch(err) {
+      console.log(err)
+    }
+  }
+
   /* Handle Add Retailer ************************ */
   const initialFlightState = {
     id: '',
@@ -133,10 +147,10 @@ const Content = () => {
         <OverviewWrapper style={{display: productOverview ? 'flex' : 'none'}}>
           <h3>Flight Overview</h3>
           { flightId ? <p>Flight ID: { flightId }</p> : null}
-          { flightName ? <p>Flight Name: { flightName }</p> : null}
+          { flightName ? <p>Flight Name: { flightName.toUpperCase() }</p> : null}
           { airline ? <p>Flight Address:  { airline.substring(0, 20) }</p> : null}
           { flightKey ? <p>Flight Key: { flightKey.substring(0, 20) }</p> : null}
-          { timestamp ? <p>Time: { timestamp }</p> : null}
+          { timestamp ? <p>Time: { Date(timestamp) }</p> : null}
           { statusCode ? <p>Status Code: { statusCode }</p> : null}
         </OverviewWrapper >
 
@@ -176,12 +190,12 @@ const Content = () => {
         </InputWrapper>
       
 
-      
+        {/* Register Flight */}
         <InputWrapper style={{display: flightSelected ? 'flex' : 'none'}}>
           <Tippy content={ <ToolTip>Only committed airlines can register flight</ToolTip>}>
-            <input type="number" placeholder='Enter status coded' onChange={ '' }  name='SKU' value={ '' } />
+            <input type="number" placeholder='Enter status coded' onChange={e => setFormFlightStatusCode(e.target.value) }  value={ formFlightStatusCode } />
           </Tippy>
-          <button onClick={ '' }>Register Flight</button>
+          <button onClick={ registerFlight }>Register Flight</button>
         </InputWrapper>
 
         
