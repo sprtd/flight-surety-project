@@ -17,7 +17,7 @@ const TabsContextProvider = ({ children }) => {
     setProductDetails(false)
   }
 
-  const handleFarmDetails = () => {
+  const handleFlightSelected = () => {
     setFlightSelected(true)
     setProductOverview(false)
     setProductDetails(false)
@@ -37,7 +37,7 @@ const TabsContextProvider = ({ children }) => {
       value={{ 
         handleProductOverview, 
         productOverview,
-        handleFarmDetails,
+        handleFlightSelected,
         flightSelected,
         handleProductDetails,
         productDetails,

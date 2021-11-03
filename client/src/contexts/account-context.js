@@ -11,7 +11,7 @@ const AccountContextProvider = ({ children }) => {
   })
 
 
-  const [web3Account, setWeb3Account] = useState()
+  const [web3Account, setWeb3Account] = useState('')
 
   const setAccountDetails = payload => {
     setWeb3Account(payload)   

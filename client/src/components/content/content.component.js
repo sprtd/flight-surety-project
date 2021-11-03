@@ -17,7 +17,10 @@ const Content = () => {
   const [formPassengerAddress, setFormPassengerAddress] = useState('')
   const [flightResult, setFlightResult] = useState('')
   const [passengerResult, setPassengerResult] = useState('')
-  const [productResult, setProductResult] = useState('')
+
+  // add airline
+  const [formAirlineName, setFormAirlineName] = useState('')
+  const [formAirlineAddress, setFormAirlineAddress] = useState('')
 
   const { id: flightId, airline, flightName, statusCode, flightKey, timestamp } = flightResult
 
@@ -75,6 +78,29 @@ const Content = () => {
     }
   }
 
+    /* Handle Apply for Airline Details ************************ */
+    const applyForAirline = async () => {
+      try {
+        await flightSuretyAppContract.methods.startAirlineApplication(formAirlineName).send({ from: web3Account }) 
+      } catch(err) {
+        console.log(err)
+      }
+    }
+
+
+     /* Handle Register Airline ************************ */
+     const registerAirline = async () => {
+      try {
+        await flightSuretyAppContract.methods.registerAirline(formAirlineAddress, 2).send({ from: web3Account }) 
+      } catch(err) {
+        console.log(err)
+      }
+    }
+
+
+
+
+
   /* Handle Add Retailer ************************ */
   const initialFlightState = {
     id: '',
@@ -115,15 +141,6 @@ const Content = () => {
         </InputWrapper>
 
 
-        {/* <ProductWrapper style={{display: productDetails ? 'flex' : 'none'}}>
-          <Tippy content={<ToolTip>Fetch fight status</ToolTip>}>
-            <input type="number" placeholder='Enter Index' onChange={e => setFormFlightId(e.target.value) } name='SKU' value={ formFlightId } />
-          </Tippy>
-
-          <button onClick={ handleOver }>Fetch Flight Details</button>
-        </ProductWrapper> */}
-
-
         <OverviewWrapper style={{display: productOverview ? 'flex' : 'none'}}>
           <h3>Flight Overview</h3>
           { flightId ? <p>Flight ID: { flightId }</p> : null}
@@ -134,9 +151,6 @@ const Content = () => {
           { statusCode ? <p>Status Code: { statusCode }</p> : null}
         </OverviewWrapper >
 
-
-
-
         <OverviewWrapper style={{display: productOverview ? 'flex' : 'none'}}>
           <h3>Passenger Overview</h3>
           { flightName ? <p>Flight Name: { flightName }</p> : null }
@@ -146,25 +160,22 @@ const Content = () => {
           { refundAmount ? <p>RefundAmount: { fromWei(refundAmount) }</p> : null}
           
         </OverviewWrapper >
-  
-   
-
         {/* Flight ************************ ************************ ************************  */}
 
         <InputWrapper style={{display: flightSelected ? 'flex' : 'none'}}>
           <Tippy content={<ToolTip>Only for intending airlines</ToolTip>}>
              
           </Tippy>
-            <input type="text" placeholder='Enter Airline Name' onChange={ '' } name='airlineName'  />            
-          <button onClick={ '' }>Apply For Airline</button>
+            <input type="text" placeholder='Enter Airline Name' onChange={e => setFormAirlineName(e.target.value)} value={ formAirlineName}/>     
+          <button onClick={ applyForAirline }>Apply For Airline</button>
         </InputWrapper>
       
         <InputWrapper style={{display: flightSelected ? 'flex' : 'none'}}>
           <Tippy content={<ToolTip>Only applied/registered airlines can register</ToolTip>}>
-          <input type="text" placeholder='Airline Address' onChange={ '' } name=''  value={ '' } />
+            <input type="text" placeholder='Airline Address' onChange={e => setFormAirlineAddress(e.target.value) }  value={ formAirlineAddress } />
           </Tippy>
          
-          <button onClick={ '' }>Register Airline</button>
+          <button onClick={ registerAirline }>Register Airline</button>
         </InputWrapper>
 
         <InputWrapper style={{display: flightSelected ? 'flex' : 'none'}}>
@@ -208,8 +219,7 @@ const Content = () => {
           <input type="number" placeholder='Enter Flight ID' onChange={ handleRetailerChange } name='SKU' value={ retailer.SKU } />
 
           <button onClick={ '' }>Fetch Flight Status</button>
-        </ProductWrapper>
-        
+        </ProductWrapper> 
       </DappContentWrapper>
     </ContentWrapper>
   )

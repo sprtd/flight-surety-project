@@ -3,7 +3,7 @@ import { TabsContext } from "../../contexts/tabs-context"
 import { TabWrapper } from "./tabs.style"
 
 const Tabs = () => {
-  const { handleProductOverview, productOverview,  handleFarmDetails, farmDetails,  handleProductDetails, productDetails } = useContext(TabsContext)
+  const { handleProductOverview, productOverview,  handleFlightSelected, flightSelected,  handleProductDetails, productDetails } = useContext(TabsContext)
  
   return(
     <TabWrapper>
@@ -13,8 +13,8 @@ const Tabs = () => {
       >Overview</h3>
 
       <h3 
-        onClick={() => handleFarmDetails(true)}  
-        style={{background: farmDetails ? 'red' : 'none', color: farmDetails  ? '#fff' : '#fff',  transition: '0.5s'}}
+        onClick={() => handleFlightSelected(true)}  
+        style={{background: flightSelected ? 'red' : 'none', color: flightSelected  ? '#fff' : '#fff',  transition: '0.5s'}}
       >Flight</h3>
 
 
