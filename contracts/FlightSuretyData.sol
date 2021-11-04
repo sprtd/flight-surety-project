@@ -132,7 +132,6 @@ contract FlightSuretyData is AirlineData {
     return keccak256(abi.encodePacked(_airline, _timestamp));
   }
 
-
   /*__________________________________ORACLE______________________________*/
 
   
@@ -210,9 +209,6 @@ contract FlightSuretyData is AirlineData {
       emit LogFlightStatusInfo(_airline, _airlineName, _timestamp, _statusCode);
       processFlightStatus(_airline, _timestamp, _statusCode);
     }
-
-
-
   }
 
   /********************************************************************************************/

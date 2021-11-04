@@ -17,7 +17,7 @@ const HDWalletProvider = require("@truffle/hdwallet-provider");
 const provider = new HDWalletProvider(privateKeys, "http://localhost:7545", 0, 5); //start at address_index 0 and load both addresses
 const web3 = new Web3(provider)
 
-let flightSuretyData, flightSuretyApp
+let flightSuretyData, flightSuretyApp, indexes, newIndexes
 
 const app = express()
 
@@ -32,6 +32,37 @@ const cors = require('cors')
 app.use(cors())
 app.use(express.json())
 app.use(morgan('dev'))
+
+
+
+/* Register Oracles ************************ */
+const registerOracles = async oracles => {
+  try {
+    const ST_CODES = [0, 10, 20, 30, 40, 50]
+    const randomStatusCodes = ST_CODES[Math.floor(Math.random() * ST_CODES.length)]
+
+    let oracleFee = await flightSuretyApp.methods.ORACLE_REGISTRATION_FEE().call()
+    await flightSuretyApp.methods.payOracleRegFees().send({value: oracleFee, from: oracles})
+    indexes = await getOracleIndex(oracles)
+    oracleMetaData.push({ oracles, indexes, randomStatusCodes})
+
+  } catch(err) {
+    console.log(err)
+  }
+}
+
+/* Get indexes of each oracle ************************ */
+const getOracleIndex = async oracles => {
+  try {
+    const fetchedOracleIndexes = await flightSuretyData.methods.getOracleIndexes().call({from: oracles})
+    return fetchedOracleIndexes
+  } catch(err) {
+    console.log('get oracle error', err)
+  }
+
+}
+
+
 
 /* Start Server ************************ */
 const startServer = async () => {
@@ -55,51 +86,35 @@ const startServer = async () => {
         return oracleAddresses
       }
     }
+
+
   } catch(err) {
     console.log(err)
   }
 }
 
 
-
-/* Register Oracles ************************ */
-const registerOracles = async oracles => {
-  try {
-    const ST_CODES = [0, 10, 20, 30, 40, 50]
-    const randomStatusCodes = ST_CODES[Math.floor(Math.random() * ST_CODES.length)]
-
-    let oracleFee = await flightSuretyApp.methods.ORACLE_REGISTRATION_FEE().call()
-    await flightSuretyApp.methods.payOracleRegFees().send({value: oracleFee, from: oracles})
-    const indexes = await getOracleIndex(oracles)
-    console.log('indexes', indexes)
-    oracleMetaData.push({ oracles, indexes, randomStatusCodes})
-
-  } catch(err) {
-    console.log(err)
-  }
-}
-
-/* Get indexes of each oracle ************************ */
-const getOracleIndex = async oracles => {
-  try {
-    const fetchedOracleIndexes = await flightSuretyData.methods.getOracleIndexes().call({from: oracles})
-    return fetchedOracleIndexes
-  } catch(err) {
-    console.log('get oracle error', err)
-  }
-
-}
 
 startServer()
   .then(async oraclePayload =>  {
-    console.log('length fetched',oraclePayload.length)
-    for(i=0; i < oraclePayload.length; i++) {
-      const oracles = oraclePayload[i]
+    const oracleRegistered = await flightSuretyData.methods.isOracleRegistered(oraclePayload[0]).call()
 
-      balance =  await web3.eth.getBalance(oraclePayload[i])
-      registerOracles(oracles)
-      console.log('oracle metadata', oracleMetaData)
+    if(oracleRegistered === false) {
+      console.log('length fetched',oraclePayload.length)
+
+      for(i=0; i < oraclePayload.length; i++) {
+        const oracles = oraclePayload[i]
+
+        balance =  await web3.eth.getBalance(oraclePayload[i])
+        registerOracles(oracles)
+        console.log('oracle metadata', oracleMetaData)
+      }
+
+      console.log(oraclePayload)
     }
+
+
+    
 
   })
   .catch(err => console.log('error', err))

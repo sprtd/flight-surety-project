@@ -171,10 +171,10 @@ contract FlightSuretyApp {
   /*                                       FLIGHT FUNCTIONS                        */
   /********************************************************************************************/
 
-  function fetchFlightStatus() public {
+  function fetchFlightStatus(uint256 _flightID) public {
     uint8 index = getRandomIndex(msg.sender);
 
-    iFlightSuretyData.fetchFlightStatus(msg.sender, block.timestamp, index);
+    iFlightSuretyData.fetchFlightStatus(index, _flightID);
   }
  
 
@@ -259,7 +259,7 @@ interface IFlightSuretyData {
   function isAirlineCommitted(address _account) external view returns(bool checkStatus);
 
   // flight functions
-  function fetchFlightStatus(address _airline, uint256 _timestamp, uint8 _index) external;
+  function fetchFlightStatus(uint8 _index, uint256 _timestamp) external;
 
 
   // oracle functions

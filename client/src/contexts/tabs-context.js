@@ -30,8 +30,6 @@ const TabsContextProvider = ({ children }) => {
     setFlightSelected(false)
   }
 
- 
-  
   return(
     <TabsContext.Provider 
       value={{ 

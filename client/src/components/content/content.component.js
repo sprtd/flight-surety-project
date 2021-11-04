@@ -36,11 +36,14 @@ const Content = () => {
   if(airline) {
     preAirline = airline.substring(0, 6)
     postAirline = airline.substring(37, 42)
+
+
     preFlightKey = flightKey.substring(0, 6)
     postFlightKey = flightKey.substring(37, 42)
-
-
   }
+
+    // Pay insurance
+    const [formFetchFlightID, setFormFetchFlightID] = useState('')
 
 
   const { id, flightAddress, flightName: flightFetchedName, passenger, state, amount, refundAmount  } = passengerResult
@@ -127,6 +130,16 @@ const Content = () => {
   const payInsurance = async () => {
     try {
       await flightSuretyDataContract.methods.payInsurance(formInsuranceCode).send({ from: web3Account }) 
+    } catch(err) {
+      console.log(err)
+    }
+  }
+
+
+  /* Fetch Flight Status ************************ */
+  const fetchFlightStatus = async () => {
+    try {
+      await flightSuretyAppContract.methods.fetchFlightStatus(formFetchFlightID).send({ from: web3Account }) 
     } catch(err) {
       console.log(err)
     }
@@ -237,22 +250,13 @@ const Content = () => {
           </Tippy>
           <button onClick={ payInsurance }>Pay Insurance</button>
         </ProductWrapper>
-
-        <ProductWrapper style={{display: productDetails ? 'flex' : 'none'}}>
-          <Tippy content={<ToolTip>check insurance</ToolTip>}>
-            <input type="number" placeholder='Enter Index' onChange={ '' } name='SKU' value={ '' } />
-          </Tippy>
-          <button onClick={ '' }>Check Insurance</button>
-        </ProductWrapper>
-
-      
+              
         <ProductWrapper style={{display: productDetails ? 'flex' : 'none'}}>
           <Tippy content={<ToolTip>Enter valid flight id</ToolTip>}>
-            <input type="number" placeholder='Enter Index' onChange={ '' } name='SKU' value={ '' } />
+            <input type="number" placeholder='Enter Flight ID' onChange={e => setFormFetchFlightID(e.target.value)} value={ formFetchFlightID } />
           </Tippy>
-          <input type="number" placeholder='Enter Flight ID' onChange={ '' } name='SKU' value={ '' } />
 
-          <button onClick={ '' }>Fetch Flight Status</button>
+          <button onClick={ fetchFlightStatus }>Fetch Flight Status</button>
         </ProductWrapper> 
       </DappContentWrapper>
     </ContentWrapper>
