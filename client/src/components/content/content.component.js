@@ -31,22 +31,24 @@ const Content = () => {
   // Pay insurance
   const [formInsuranceCode, setFormInsuranceCode] = useState('')
 
-  const { id: flightId, airline, flightName, statusCode, flightKey, timestamp } = flightResult
+ 
 
+  let { id: flightId, airline, flightName, statusCode, flightKey, timestamp } = flightResult
+  
   if(airline) {
     preAirline = airline.substring(0, 6)
     postAirline = airline.substring(37, 42)
-
-
+    
+    
     preFlightKey = flightKey.substring(0, 6)
     postFlightKey = flightKey.substring(37, 42)
   }
 
     // Pay insurance
     const [formFetchFlightID, setFormFetchFlightID] = useState('')
-
-
-  const { id, flightAddress, flightName: flightFetchedName, passenger, state, amount, refundAmount  } = passengerResult
+    
+    
+  let { id, flightAddress, flightName: flightFetchedName, passenger, state, amount, refundAmount  } = passengerResult
 
 
 
@@ -63,16 +65,16 @@ const Content = () => {
   }
 
 
-
-
-
-
   /* Fetch Flight Details ************************ */
   const getFlightDetails = async () => {
     try {
+      // console.log('flight details', fetchedFlightDetails)
       const fetchedFlightDetails = await flightSuretyDataContract.methods.getFlightDetails(formFlightId).call()
       console.log('fetched details', fetchedFlightDetails)
-      setFlightResult(fetchedFlightDetails)
+      if(fetchedFlightDetails) {
+        setFlightResult(fetchedFlightDetails)
+        
+      }
     } catch(err) {
       console.log(err)
     }

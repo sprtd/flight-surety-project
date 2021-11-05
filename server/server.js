@@ -97,6 +97,8 @@ const startServer = async () => {
 
 startServer()
   .then(async oraclePayload =>  {
+
+    console.log('oracles', oraclePayload)
     const oracleRegistered = await flightSuretyData.methods.isOracleRegistered(oraclePayload[0]).call()
 
     if(oracleRegistered === false) {

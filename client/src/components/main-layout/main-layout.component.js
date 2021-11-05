@@ -29,6 +29,7 @@ const MainLayout = () => {
       const flightSuretyData = new web3.eth.Contract(FlightSuretyData.abi, deployedNetworkData && deployedNetworkData.address)
       const flightSuretyApp = new web3.eth.Contract(FlightSuretyApp.abi, deployedNetworkApp && deployedNetworkApp.address)
 
+
    
       setAppContractInstance(flightSuretyApp)
       setDataContractInstance(flightSuretyData)
