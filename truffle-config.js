@@ -1,6 +1,8 @@
-
+require('dotenv').config({ path: './config/config.env'})
 const path = require('path')
-// const HDWalletProvider = require('@truffle/hdwallet-provider');
+const HDWalletProvider = require('@truffle/hdwallet-provider');
+
+
 
 
 module.exports = {
@@ -10,16 +12,25 @@ module.exports = {
   networks: {
    
     dev: {
-     host: "127.0.0.1",     
-     port: 7545,            
-     network_id: "*",       
+      host: "127.0.0.1",     
+      port: 7545,            
+      network_id: "*",   
+
     },
     ganache: {
-     host: "127.0.0.1",     
-     port: 8545,            
-     network_id: "*",      
+      networkCheckTimeout: 1000000, 
+      host: "127.0.0.1",     
+      port: 8545,            
+      network_id: "*",   
     },
-    
+    rinkeby: {
+      provider: () => new HDWalletProvider({
+        mnemonic: process.env.MNEMONIC,
+        providerOrUrl: process.env.RINKEBY_ENDPOINT
+      }),
+      network_id: 4,   
+      networkCheckTimeout: 999999,
+    },
    
    
   },

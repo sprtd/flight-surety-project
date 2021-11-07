@@ -1,7 +1,9 @@
+const web3 = require('web3')
+
 // conversion helpers
-const toWei = payload => web3.utils.toWei(payload.toString(), 'ether')
-const fromWei = payload => web3.utils.fromWei(payload.toString(), 'ether')
-const ETHBalance = payload => web3.eth.getBalance(payload)
+const toWei = payload =>  web3.utils.toWei(payload.toString(), 'ether')
+const fromWei =  payload =>  web3.utils.fromWei(payload.toString(), 'ether')
+const ETHBalance =  payload => web3.eth.getBalance(payload)
 
 
 module.exports = {

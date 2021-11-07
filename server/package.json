@@ -2,9 +2,9 @@
   "name": "server",
   "version": "1.0.0",
   "description": "",
-  "main": "server.js",
+  "main": "index.js",
   "scripts": {
-    "start": "nodemon server.js ",
+    "start": "nodemon index.js ",
     "dev": "nodemon server.js"
   },
   "author": "",
@@ -15,7 +15,9 @@
     "cors": "^2.8.5",
     "dotenv": "^10.0.0",
     "express": "^4.17.1",
+    "ganache-cli": "^6.12.2",
     "morgan": "^1.10.0",
-    "web3": "^1.6.0"
+    "web3": "^1.6.0",
+    "web3-providers-ws": "^1.6.0"
   }
 }

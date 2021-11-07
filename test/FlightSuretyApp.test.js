@@ -285,8 +285,8 @@ contract('FlightSuretyApp', async payloadAccounts => {
       assert.equal(flightAddress, deployer)
       assert.equal(passenger, addr9)
       assert.equal(state, 'Paid')
-      assert.equal(amount, 1)
-      assert.equal(fromWei(passengerBalance), 1)
+      assert.equal(amount, fromWei(INSURANCE_FEE))
+      assert.equal(fromWei(passengerBalance), fromWei(INSURANCE_FEE))
      
 
       console.log('passenger balance, ', fromWei(passengerBalance))
@@ -342,5 +342,35 @@ contract('FlightSuretyApp', async payloadAccounts => {
 
 
     })
+  }) 
+
+    
+  contract('Emergency Withdraw', () => {
+    it('Withdraws ETH from data contract', async () => {
+      const ORACLE_REGISTRATION_FEE = await flightSuretyApp.ORACLE_REGISTRATION_FEE.call()
+      
+      
+      await flightSuretyApp.payOracleRegFees({value: ORACLE_REGISTRATION_FEE, from: payloadAccounts[20]})
+      const isRegistered = await flightSuretyData.isOracleRegistered(payloadAccounts[20])
+      assert.isTrue(isRegistered)
+      const deployerBalanceBefore = await web3.eth.getBalance(deployer)
+      console.log('deployer balance before', fromWei(deployerBalanceBefore))
+      
+      
+      const dataBalanceBefore = await web3.eth.getBalance(flightSuretyDataAddress)
+      
+      await flightSuretyData.emergencyWithdraw({from: deployer})
+      const dataBalanceAfter = await web3.eth.getBalance(flightSuretyDataAddress)
+      const deployerBalanceAfter = await web3.eth.getBalance(deployer)
+      console.log('deployer balance', fromWei(deployerBalanceAfter))
+      
+
+      // data contract balance check after emergency withdrawal
+      const ethDiff = dataBalanceBefore - dataBalanceAfter
+      console.log('eth diff', fromWei(ethDiff.toString()))
+      assert.equal(fromWei(ORACLE_REGISTRATION_FEE), fromWei(ethDiff.toString())) // difference between data contract's initial ETH balance and data contract's final ETH balance equals amount paid by oracle
+
+    })
+
   }) 
 })

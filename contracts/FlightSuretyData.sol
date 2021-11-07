@@ -11,6 +11,8 @@ contract FlightSuretyData is AirlineData {
   /*                                      FLIGHT STATE VARIABLES                          */
   /******************************************************************************************/
 
+  address public contractOwner;
+
   // Flight status codes
   uint8 private constant STATUS_CODE_UNKNOWN = 0;
   uint8 private constant STATUS_CODE_ON_TIME = 10;
@@ -43,6 +45,12 @@ contract FlightSuretyData is AirlineData {
 
    // Event fired when flight status request is requested
   event LogOracleRequest(uint8 index, address airline, string flight, uint256 timestamp);
+
+
+   constructor() {
+    contractOwner = msg.sender;
+
+  }
 
   /********************************************************************************************/
   /*                                      FLIGHT CORE FUNCTIONS                 */
@@ -293,7 +301,7 @@ contract FlightSuretyData is AirlineData {
     emit LogPassengerInsurance(msg.sender, passengersInsurance[msg.sender].amount);
   }
 
-  /*******************************************************************************************/
+  /***********************************,********************************************************/
   /*                                       PASSENGER UTILITY FUNCTIONS                         */
   /*****************************************************************************************/
   function getPassengerDetails(address _account) external view returns
@@ -331,6 +339,20 @@ contract FlightSuretyData is AirlineData {
   function getPassengerBalance(address _account) external view returns(uint256) {
     return passengersInsurance[_account].amount;
   }
+
+  /********************************************************************************************/
+  /*                                      CONTRACT RECEIVE ETHER                                */
+  /********************************************************************************************/
+
+  function emergencyWithdraw() external payable {
+    require(msg.sender == contractOwner, 'not ownr');
+    uint256 contractBalance = address(this).balance;
+    require(contractBalance > 0, 'no av. ETH');
+    
+    (bool sent,) = payable(contractOwner).call{value: contractBalance}('');
+    require(sent, 'failed to send ether');
+  }
+
 
 
   /********************************************************************************************/

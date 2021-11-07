@@ -12,6 +12,9 @@ contract FlightSuretyApp {
     
   address public contractOwner;
 
+
+
+
   uint256 public constant AIRLINE_FEE =  10 ether;
     
     
