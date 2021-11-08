@@ -11,8 +11,6 @@ const { PORT } = process.env
 /* Web3 Config ************************ */
 const web3 = new Web3(new Web3.providers.WebsocketProvider('ws://localhost:7545'))
 
-
-
 let accounts
 
 let flightSuretyData, flightSuretyApp, indexes
@@ -30,7 +28,7 @@ const registerOracles = async (oracles) => {
     const randomStatusCodes = ST_CODES[Math.floor(Math.random() * ST_CODES.length)]
     
     let oracleFee = await flightSuretyApp.methods.ORACLE_REGISTRATION_FEE().call()
-    await flightSuretyApp.methods.payOracleRegFees().send({value: oracleFee, from: oracles })
+    await flightSuretyApp.methods.payOracleRegFees().send({value: oracleFee, from: oracles, gas: 3000000 })
     indexes = await getOracleIndex(oracles)
     oracleMetaData.push({ oracles, indexes, randomStatusCodes})
     
@@ -64,7 +62,9 @@ const startServer = async () => {
     
     accounts = await web3.eth.getAccounts()
 
-    
+   
+
+    // Events
     let eventOptions = {
       filter: {
         value: []
@@ -75,48 +75,27 @@ const startServer = async () => {
     flightSuretyData.events.LogFlightRegistered(eventOptions)
     .on('data', event => {
         const { returnValues: { flightKey, airline, timestamp, statusCode} } = event
-      console.log()
-      console.log('airline', airline)
-      console.log('timestamp', timestamp)
-      console.log('statusCode', statusCode)
+      console.log({airline})
+      console.log({timestamp})
+      console.log({statusCode})
+      console.log({flightKey})
     })
-    .on('changed', changed => console.log(changed))
     .on('error', err => console.log('err' , err))
     .on('connected', str => console.log(str))
-    const executeReOracle = async() => {
-          
-      const isOracleRegisteredBefore = await flightSuretyData.methods.isOracleRegistered(accounts[20]).call()
-      console.log('oracle registration status', isOracleRegisteredBefore)
-      
-      let oracleFee = await flightSuretyApp.methods.ORACLE_REGISTRATION_FEE().call()
-      if(isOracleRegisteredBefore === false) {
-        console.log('oracle fee', fromWei(oracleFee))
-        console.log('length fetched',accounts.length)
-        
-      
-        try {
-          const ST_CODES = [0, 10, 20, 30, 40, 50]
-          const randomStatusCodes = ST_CODES[Math.floor(Math.random() * ST_CODES.length)]
-          const oracleAccount = accounts[20]
-          
-          // registerOracles(oracleAccount)
-      
-          // let oracleFee = await flightSuretyApp.methods.ORACLE_REGISTRATION_FEE().call()
-          // await flightSuretyApp.methods.payOracleRegFees().send({ value: oracleFee, from: oracleAccount })
-          // indexes = await getOracleIndex(oracleAccount)
-          // oracleMetaData.push({oracleAccount, indexes, randomStatusCodes})
-          
-        } catch(err) {
-          console.log(err)
-        }
-      }
+    
 
+         
+    const isOracleRegisteredBefore = await flightSuretyData.methods.isOracleRegistered(accounts[20]).call()
+    console.log('oracle registration status before', isOracleRegisteredBefore)
+    
+    
+    if(isOracleRegisteredBefore === false) {     
+      for(i=20; i < accounts.length; i++) {
+        await registerOracles(accounts[i])
+        console.log(accounts[i])
+      }     
     }
 
-    executeReOracle()
-    
-    
-    
   } catch(err) {
     console.log(err)
   }
@@ -126,7 +105,6 @@ startServer()
 const app = express()
 app.listen(PORT, () => console.log(`server running on port: ${PORT}`))
 
-// module.exports = app
 
 
 
