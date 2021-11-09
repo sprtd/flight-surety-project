@@ -2,21 +2,24 @@ require('dotenv').config()
 
 const express = require('express')
 
+const { connectDB } = require('./models/config/db.config')
+
 const FlightSuretyData = require('../client/src/abi/FlightSuretyData.json')
 const FlightSuretyApp = require('../client/src/abi/FlightSuretyApp.json')
 const Web3 = require('web3')
+const fs = require('fs')
+connectDB()
 
 const { PORT } = process.env
+const Oracle = require('./models/oracle-model')
 
 /* Web3 Config ************************ */
 const web3 = new Web3(new Web3.providers.WebsocketProvider('ws://localhost:7545'))
 
-let accounts
 
-let flightSuretyData, flightSuretyApp, indexes
+let flightSuretyData, flightSuretyApp, accounts, indexes, newJSONData
 
-const oracleMetaData = []
-
+const loopedOracleArray = []
 
 const { toWei, fromWei } = require('../utils/conversion')
 
@@ -28,15 +31,33 @@ const registerOracles = async (oracles) => {
     const randomStatusCodes = ST_CODES[Math.floor(Math.random() * ST_CODES.length)]
     
     let oracleFee = await flightSuretyApp.methods.ORACLE_REGISTRATION_FEE().call()
-    await flightSuretyApp.methods.payOracleRegFees().send({value: oracleFee, from: oracles, gas: 3000000 })
+    await flightSuretyApp.methods.payOracleRegFees().send({ value: oracleFee, from: oracles, gas: 3000000 })
     indexes = await getOracleIndex(oracles)
-    oracleMetaData.push({ oracles, indexes, randomStatusCodes})
+    if(indexes.length) {
+      const saveOracle = async () => {
+        try {
+          const newOracle = new Oracle({
+            oracles, 
+            indexes, 
+            randomStatusCodes
+
+          })
+          await newOracle.save()
+
+        } catch(err) {
+          console.log('err', err)
+        }
+      }
+
+      saveOracle()  
+
+    }
     
   } catch(err) {
     console.log(err)
   }
 }
-              
+
 /* Get indexes of each oracle ************************ */
 const getOracleIndex = async oracles => {
   try {
@@ -51,7 +72,6 @@ const getOracleIndex = async oracles => {
 /* Start Server ************************ */
 const startServer = async () => {
   try {
-    
     /* Network & Contract Config ************************ */
     const networkId = await web3.eth.net.getId()
     const  deployedNetworkData = await FlightSuretyData.networks[networkId]
@@ -61,8 +81,6 @@ const startServer = async () => {
     flightSuretyApp = new web3.eth.Contract(FlightSuretyApp.abi, deployedNetworkApp && deployedNetworkApp.address)
     
     accounts = await web3.eth.getAccounts()
-
-   
 
     // Events
     let eventOptions = {
@@ -88,8 +106,7 @@ const startServer = async () => {
     const isOracleRegisteredBefore = await flightSuretyData.methods.isOracleRegistered(accounts[20]).call()
     console.log('oracle registration status before', isOracleRegisteredBefore)
     
-    
-    if(isOracleRegisteredBefore === false) {     
+    if(!isOracleRegisteredBefore) {     
       for(i=20; i < accounts.length; i++) {
         await registerOracles(accounts[i])
         console.log(accounts[i])
