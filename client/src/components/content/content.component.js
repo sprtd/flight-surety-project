@@ -131,7 +131,7 @@ const Content = () => {
   /* Pay Insurance ************************ */
   const payInsurance = async () => {
     try {
-      await flightSuretyDataContract.methods.payInsurance(formInsuranceCode).send({ from: web3Account }) 
+      await flightSuretyDataContract.methods.payInsurance(formInsuranceCode).send({ from: web3Account, value: toWei(1) }) 
     } catch(err) {
       console.log(err)
     }
@@ -178,7 +178,7 @@ const Content = () => {
           <button onClick={ getFlightDetails } style={{marginBottom: '10vh'}}>Find Flight</button>
 
           <Tippy content={<ToolTip>Enter passenger address </ToolTip>}>
-            <input type="text" placeholder='Enter Index' onChange={e => setFormPassengerAddress(e.target.value) } value={ formPassengerAddress } />
+            <input type="text" placeholder='Enter Passenger Address' onChange={e => setFormPassengerAddress(e.target.value) } value={ formPassengerAddress } />
           </Tippy>
           <button onClick={ getPassengerDetails }>Get Passenger Details</button>
 

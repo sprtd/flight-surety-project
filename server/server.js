@@ -1,5 +1,4 @@
 require('dotenv').config()
-
 const express = require('express')
 
 const { connectDB } = require('./models/config/db.config')
@@ -7,7 +6,7 @@ const { connectDB } = require('./models/config/db.config')
 const FlightSuretyData = require('../client/src/abi/FlightSuretyData.json')
 const FlightSuretyApp = require('../client/src/abi/FlightSuretyApp.json')
 const Web3 = require('web3')
-const fs = require('fs')
+const BN = require('bignumber.js')
 connectDB()
 
 const { PORT } = process.env
@@ -20,9 +19,6 @@ const web3 = new Web3(new Web3.providers.WebsocketProvider('ws://localhost:7545'
 let flightSuretyData, flightSuretyApp, accounts, indexes, newJSONData
 
 const loopedOracleArray = []
-
-const { toWei, fromWei } = require('../utils/conversion')
-
 
 /* Register Oracles ************************ */
 const registerOracles = async (oracles) => {
@@ -39,7 +35,7 @@ const registerOracles = async (oracles) => {
           const newOracle = new Oracle({
             oracles, 
             indexes, 
-            randomStatusCodes
+            statusCodes: randomStatusCodes
 
           })
           await newOracle.save()
@@ -50,7 +46,6 @@ const registerOracles = async (oracles) => {
       }
 
       saveOracle()  
-
     }
     
   } catch(err) {
@@ -68,6 +63,25 @@ const getOracleIndex = async oracles => {
   }
 }
 
+/* Get respective metadata of each saved oracle ************************ */
+const getOracleMetaData = async () => {
+  try {
+    const oracleResult = await Oracle.find({}).exec()
+    // console.log('oracle retrieved', oracleResult)
+
+    return oracleResult
+
+  } catch(err) {
+
+  }
+}
+
+
+/* Submit oracle responses ************************ */
+const submitOracleResponse = async (index, airline, flightName, timestamp) => {
+
+
+}
 
 /* Start Server ************************ */
 const startServer = async () => {
@@ -81,6 +95,7 @@ const startServer = async () => {
     flightSuretyApp = new web3.eth.Contract(FlightSuretyApp.abi, deployedNetworkApp && deployedNetworkApp.address)
     
     accounts = await web3.eth.getAccounts()
+  
 
     // Events
     let eventOptions = {
@@ -89,19 +104,57 @@ const startServer = async () => {
       }, 
       fromBlock: 0,
     }
-    
-    flightSuretyData.events.LogFlightRegistered(eventOptions)
-    .on('data', event => {
-        const { returnValues: { flightKey, airline, timestamp, statusCode} } = event
-      console.log({airline})
-      console.log({timestamp})
-      console.log({statusCode})
-      console.log({flightKey})
-    })
-    .on('error', err => console.log('err' , err))
-    .on('connected', str => console.log(str))
-    
 
+
+    // Watch Oracle Registration  Event
+    flightSuretyData.events.LogFlightRegistered(eventOptions)
+      .on('data', event => {
+          const { returnValues: { name, flightKey, airline, timestamp, statusCode} } = event
+          console.log({ name })
+          console.log({airline})
+          console.log({timestamp})
+          console.log({statusCode})
+          console.log({flightKey})
+
+      })
+      .on('error', err => console.log('err' , err))
+      .on('connected', str => console.log(str))
+
+    // Watch Fetch FlightStatus Event
+    flightSuretyData.events.LogOracleRequest(eventOptions)
+      .on('data', event => {
+        console.log('event returnValues', event.returnValues)
+        const { returnValues: { index, airline, flight: flightName, timestamp }} = event        
+        const delegateOracles = []
+
+        const checkOracleResult = async () => {
+          try {
+            const fetchedOracles = await getOracleMetaData()
+            // console.log('fetched oracles', fetchedOracles)
+            if(fetchedOracles.length) {
+              fetchedOracles.forEach(({oracles, indexes, statusCodes}) =>  {
+
+                // select oracle delegates whose index matches flight status request
+                if(BN(indexes[0]).isEqualTo(index) || BN(indexes[1]).isEqualTo(index) || BN(indexes[2]).isEqualTo(index)) {
+                  delegateOracles.push(oracles)
+
+                  if(delegateOracles.length >= 3) {
+                    console.log('delegated oracles', delegateOracles)
+
+                  }
+                }
+              })
+            }
+
+          } catch(err) {
+            console.log('fetch oracle error', err)
+          }
+
+        }
+
+
+        checkOracleResult()    
+      })
          
     const isOracleRegisteredBefore = await flightSuretyData.methods.isOracleRegistered(accounts[20]).call()
     console.log('oracle registration status before', isOracleRegisteredBefore)

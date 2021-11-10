@@ -40,8 +40,8 @@ contract FlightSuretyData is AirlineData {
   /*                                      FLIGHT EVENTS                                      */
   /******************************************************************************************/
 
-  event LogFlightRegistered(bytes32 flightKey, address indexed airline, uint256 timestamp, uint8 statusCode);
-  event LogFlightStatusProcessed(address indexed airline, uint256 timestamp);
+  event LogFlightRegistered(string name, bytes32 flightKey, address indexed airline, uint256 timestamp, uint8 statusCode);
+  event LogFlightStatusProcessed(address indexed airline, uint256 timestamp, uint8 statusCode);
 
    // Event fired when flight status request is requested
   event LogOracleRequest(uint8 index, address airline, string flight, uint256 timestamp);
@@ -80,14 +80,14 @@ contract FlightSuretyData is AirlineData {
       timestamp: block.timestamp
     });
 
-    emit LogFlightRegistered(flightKey, msg.sender, block.timestamp, _statusCode);
+    emit LogFlightRegistered(name, flightKey, msg.sender, block.timestamp, _statusCode);
   }
 
   function processFlightStatus(address _airline, uint256 _timestamp, uint8 _statusCode)  private {
     bytes32 key = generateFlightKey(_airline, _timestamp);
     flights[key].statusCode = _statusCode;
 
-    emit LogFlightStatusProcessed(_airline, _timestamp);
+    emit LogFlightStatusProcessed(_airline, _timestamp, _statusCode);
   }
 
   // Generate a request for oracles  to fetch flight information
@@ -274,17 +274,16 @@ contract FlightSuretyData is AirlineData {
   /*****************************************************************************************/
 
   function payInsurance(uint256 _flightId)  external payable {
+    require(msg.value == PASSENGER_INSURANCE_FEE, '1ETH insurance must be paid');
     require(_flightId != 0 || _flightId <= flightCounter, 'invalid flight id');
 
     bytes32 key = flightKeys[_flightId];
     require(_flightId == flights[key].id, "flight does not exist");
 
     
-    // require(airlines[_account].status == AirlineStatus.Committed, 'flight does not exist');
-    // require(passengersInsurance[tx.origin].state == PassengerInsuranceState.Unassigned, 'insurance exits');
+    require(passengersInsurance[tx.origin].state == PassengerInsuranceState.Unassigned, 'insurance exits');
     (uint256 id, string memory name, address airlineAccount,) = this.getAirlineDetails(flights[key].airline);
 
-    require(msg.value <= PASSENGER_INSURANCE_FEE, '1ETH insurance must be paid');
     (bool send, ) = address(this).call{value: msg.value}('');
     require(send, 'failed to send ETH');
 
