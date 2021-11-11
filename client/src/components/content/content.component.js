@@ -55,14 +55,9 @@ const Content = () => {
 
   const { flightSuretyDataContract, flightSuretyAppContract } = useContext(FunctionContext)
   const { web3Account } = useContext(AccountContext)
-  const [sku, setSKU] = useState('')
 
 
- 
-  const initialPassengerInsurance =  {
-    index: '', 
-    flightID: ''
-  }
+
 
 
   /* Fetch Flight Details ************************ */
@@ -147,23 +142,7 @@ const Content = () => {
     }
   }
 
-  /* Handle Add Retailer ************************ */
-  const initialFlightState = {
-    id: '',
-    address: ''
-  }
 
- 
-
-
-
-  //  /* Handle Passenger Insurance ************************ */
-  //  const [passengerInsurance, setPassengerInsurance] = useState(initialPassengerInsurance)
-  //  const handlePassengerInsuranceChange = e => {
-  //    const { name, value } = e.target
-  //    setPassengerInsurance(prev => ({...prev, [name]: value}))
-  //  }
-  
   return (
     <ContentWrapper>
       <Tabs />
@@ -196,7 +175,7 @@ const Content = () => {
           { flightName ? <p>Flight Name: { flightName.toUpperCase() }</p> : null}
           { airline ? <p>Flight Address:  { `${preAirline}...${postAirline}` }</p> : null}
           { flightKey ? <p>Flight Key: { `${preFlightKey}...${postFlightKey}` }</p> : null}
-          { timestamp ? <p>Time: { Date(timestamp) }</p> : null}
+          { timestamp ? <p>Time: { timestamp }</p> : null}
           { statusCode ? <p>Status Code: { statusCode }</p> : null}
         </OverviewWrapper >
 

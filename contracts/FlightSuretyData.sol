@@ -101,7 +101,7 @@ contract FlightSuretyData is AirlineData {
     // uint8 index = getRandomIndex(msg.sender);
 
     // Generate a unique key for storing  the request
-    bytes32 key = keccak256(abi.encodePacked(_index, airline, timestamp));
+    bytes32 key = keccak256(abi.encodePacked(_index, airline, flightName, timestamp));
     oracleResponses[key].requester = tx.origin;
     oracleResponses[key].isOpen = true;
 
@@ -174,9 +174,9 @@ contract FlightSuretyData is AirlineData {
   event LogOracleRegistered(address indexed oracle, uint8[3] indexes);
 
   // Event fired each time an oracle submits a response
-  event LogFlightStatusInfo(address airline, string flight, uint256 timestamp, uint8 statusCode);
+  event LogFlightStatusInfo(address airline, string flightName, uint256 timestamp, uint8 statusCode);
 
-  event LogOracleReport(address airline, string airlineName, uint256 timestamp, uint8 status);
+  event LogOracleReport(address airline, uint256 timestamp, uint8 status);
 
   /********************************************************************************************/
   /*                                      ORACLE CORE FUNCTIONS                              */
@@ -197,25 +197,31 @@ contract FlightSuretyData is AirlineData {
     * @dev Called by oracle in response to an outstanding request
     * response is only valid if there's a pending open request status  and  that its responxe index matches that which was assigned during oracle registration
    */
+
+       // Generate a unique key for storing  the request
+    // bytes32 key = keccak256(abi.encodePacked(_index, airline, timestamp));
+    // oracleResponses[key].requester = tx.origin;
+    // oracleResponses[key].isOpen = true;
+
   function submitOracleResponse
     (
       uint8 _index, 
       address _airline, 
-      string memory _airlineName, 
+      string memory _flightName,
       uint256 _timestamp, 
       uint8 _statusCode
     ) external 
   {
     require((oracles[msg.sender].indexes[0] == _index) || (oracles[msg.sender].indexes[1] == _index) || (oracles[msg.sender].indexes[2] == _index), 'IDX mismatch');
-    bytes32 key = keccak256(abi.encodePacked(_index, _airline, _airlineName, _timestamp));
+    bytes32 key = keccak256(abi.encodePacked(_index, _airline, _flightName, _timestamp));
     require(oracleResponses[key].isOpen, 'Fli. or timest. mismatch');
     oracleResponses[key].responses[_statusCode].push(msg.sender);
 
     // oracle response is not valid until MIN_RESPONSES threshold is reached
-    emit LogOracleReport(msg.sender, _airlineName, _timestamp, _statusCode);
+    emit LogOracleReport(msg.sender, _timestamp, _statusCode);
     if(oracleResponses[key].responses[_statusCode].length >= MIN_RESPONSES) {
-      emit LogFlightStatusInfo(_airline, _airlineName, _timestamp, _statusCode);
-      processFlightStatus(_airline, _timestamp, _statusCode);
+      emit LogFlightStatusInfo(_airline, _flightName, _timestamp, _statusCode);
+      processFlightStatus(_airline,_timestamp, _statusCode);
     }
   }
 

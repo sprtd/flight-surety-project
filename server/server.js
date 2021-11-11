@@ -77,12 +77,6 @@ const getOracleMetaData = async () => {
 }
 
 
-/* Submit oracle responses ************************ */
-const submitOracleResponse = async (index, airline, flightName, timestamp) => {
-
-
-}
-
 /* Start Server ************************ */
 const startServer = async () => {
   try {
@@ -123,7 +117,7 @@ const startServer = async () => {
     // Watch Fetch FlightStatus Event
     flightSuretyData.events.LogOracleRequest(eventOptions)
       .on('data', event => {
-        console.log('event returnValues', event.returnValues)
+        console.log('log oracle request events', event.returnValues)
         const { returnValues: { index, airline, flight: flightName, timestamp }} = event        
         const delegateOracles = []
 
@@ -133,13 +127,33 @@ const startServer = async () => {
             // console.log('fetched oracles', fetchedOracles)
             if(fetchedOracles.length) {
               fetchedOracles.forEach(({oracles, indexes, statusCodes}) =>  {
+               
 
                 // select oracle delegates whose index matches flight status request
                 if(BN(indexes[0]).isEqualTo(index) || BN(indexes[1]).isEqualTo(index) || BN(indexes[2]).isEqualTo(index)) {
+
                   delegateOracles.push(oracles)
 
                   if(delegateOracles.length >= 3) {
-                    console.log('delegated oracles', delegateOracles)
+                    // console.log('delegated oracles', delegateOracles)
+                  
+                    for(i=0;i<delegateOracles.length;i++) {
+                      // console.log('delegate oracles', delegateOracles[i])
+                      const reportingOracles = delegateOracles[i]
+
+                      const submit = async () => {
+                        try {
+                          await flightSuretyData.methods.submitOracleResponse(index, airline, timestamp, statusCodes).send({from: reportingOracles, gas: 4750000 })
+  
+                        } catch(err) {
+                          console.log('oracle submission error', err)
+                        }
+
+                      }
+
+                     submit()
+                     
+                    }
 
                   }
                 }
@@ -149,12 +163,20 @@ const startServer = async () => {
           } catch(err) {
             console.log('fetch oracle error', err)
           }
-
         }
-
 
         checkOracleResult()    
       })
+      .on('error', err => console.log('err' , err))
+
+
+    // Watch Processed Flight Status
+    flightSuretyData.events.LogFlightStatusProcessed(eventOptions)
+      .on('data', event => {
+        console.log('log flight status processed', event.returnValues)
+      })
+      .on('error', err => console.log('err' , err))
+
          
     const isOracleRegisteredBefore = await flightSuretyData.methods.isOracleRegistered(accounts[20]).call()
     console.log('oracle registration status before', isOracleRegisteredBefore)
@@ -163,6 +185,7 @@ const startServer = async () => {
       for(i=20; i < accounts.length; i++) {
         await registerOracles(accounts[i])
         console.log(accounts[i])
+
       }     
     }
 
