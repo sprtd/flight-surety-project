@@ -126,24 +126,27 @@ const startServer = async () => {
             const fetchedOracles = await getOracleMetaData()
             // console.log('fetched oracles', fetchedOracles)
             if(fetchedOracles.length) {
-              fetchedOracles.forEach(({oracles, indexes, statusCodes}) =>  {
+              fetchedOracles.forEach((loopedOracles) =>  {
+                // console.log('loop indexes', loopedOracles.indexes)
                
 
                 // select oracle delegates whose index matches flight status request
-                if(BN(indexes[0]).isEqualTo(index) || BN(indexes[1]).isEqualTo(index) || BN(indexes[2]).isEqualTo(index)) {
+                if(BN(loopedOracles.indexes[0]).isEqualTo(index) || BN(loopedOracles.indexes[1]).isEqualTo(index) || BN(loopedOracles.indexes[2]).isEqualTo(index)) {
 
-                  delegateOracles.push(oracles)
-
+                  delegateOracles.push(loopedOracles)
+                  
                   if(delegateOracles.length >= 3) {
                     // console.log('delegated oracles', delegateOracles)
                   
                     for(i=0;i<delegateOracles.length;i++) {
                       // console.log('delegate oracles', delegateOracles[i])
-                      const reportingOracles = delegateOracles[i]
+                      const reportingOracles = delegateOracles[i].oracles
+                      const reportingStatusCodes = delegateOracles[i].statusCodes
+                      console.log('reporting status code', reportingStatusCodes)
 
                       const submit = async () => {
                         try {
-                          await flightSuretyData.methods.submitOracleResponse(index, airline, timestamp, statusCodes).send({from: reportingOracles, gas: 4750000 })
+                          await flightSuretyData.methods.submitOracleResponse(index, airline, flightName, timestamp, reportingStatusCodes).send({from: reportingOracles, gas: 4750000 })
   
                         } catch(err) {
                           console.log('oracle submission error', err)
@@ -171,11 +174,11 @@ const startServer = async () => {
 
 
     // Watch Processed Flight Status
-    flightSuretyData.events.LogFlightStatusProcessed(eventOptions)
-      .on('data', event => {
-        console.log('log flight status processed', event.returnValues)
-      })
-      .on('error', err => console.log('err' , err))
+    // flightSuretyData.events.LogFlightStatusProcessed(eventOptions)
+    //   .on('data', event => {
+    //     console.log('log flight status processed', event.returnValues)
+    //   })
+    //   .on('error', err => console.log('err' , err))
 
          
     const isOracleRegisteredBefore = await flightSuretyData.methods.isOracleRegistered(accounts[20]).call()

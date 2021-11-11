@@ -18,6 +18,7 @@ const Content = () => {
   const [formPassengerAddress, setFormPassengerAddress] = useState('')
   const [flightResult, setFlightResult] = useState('')
   const [passengerResult, setPassengerResult] = useState('')
+  const [formFlightDetailsId, setFormFlightDetailsId] = useState('')
 
   // Add airline state
   const [formAirlineName, setFormAirlineName] = useState('')
@@ -141,6 +142,7 @@ const Content = () => {
       console.log(err)
     }
   }
+
 
 
   return (
