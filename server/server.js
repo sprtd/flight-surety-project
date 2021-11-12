@@ -172,15 +172,6 @@ const startServer = async () => {
       })
       .on('error', err => console.log('err' , err))
 
-
-    // Watch Processed Flight Status
-    // flightSuretyData.events.LogFlightStatusProcessed(eventOptions)
-    //   .on('data', event => {
-    //     console.log('log flight status processed', event.returnValues)
-    //   })
-    //   .on('error', err => console.log('err' , err))
-
-         
     const isOracleRegisteredBefore = await flightSuretyData.methods.isOracleRegistered(accounts[20]).call()
     console.log('oracle registration status before', isOracleRegisteredBefore)
     
