@@ -14,11 +14,11 @@ import { toWei, fromWei } from '../../utils/conversion'
 const Content = () => {
   let preAirline, postAirline, preFlightKey, postFlightKey
   const { productOverview,  flightSelected, productDetails } = useContext(TabsContext)
+  const [contractOperationalStatus, setContractOperationalStatus] = useState(false)
   const [formFlightId, setFormFlightId] = useState('')
   const [formPassengerAddress, setFormPassengerAddress] = useState('')
   const [flightResult, setFlightResult] = useState('')
   const [passengerResult, setPassengerResult] = useState('')
-  const [formFlightDetailsId, setFormFlightDetailsId] = useState('')
 
   // Add airline state
   const [formAirlineName, setFormAirlineName] = useState('')
@@ -58,17 +58,30 @@ const Content = () => {
   const { web3Account } = useContext(AccountContext)
 
 
-
+  /* Get Operational Status ************************ */
+  const getOperationalStatus = async () => {
+    try {
+      const operationalStatus = await flightSuretyAppContract.methods.getOperationalStatus().call()
+      console.log('operational status', operationalStatus)
+      setContractOperationalStatus(operationalStatus)
+      return operationalStatus
+     
+    } catch(err) {
+      console.log(err)
+    }
+  }
 
 
   /* Fetch Flight Details ************************ */
   const getFlightDetails = async () => {
     try {
-      // console.log('flight details', fetchedFlightDetails)
       const fetchedFlightDetails = await flightSuretyDataContract.methods.getFlightDetails(formFlightId).call()
       console.log('fetched details', fetchedFlightDetails)
+      const status = await getOperationalStatus()
       if(fetchedFlightDetails) {
+        console.log('st here', status)
         setFlightResult(fetchedFlightDetails)
+        setContractOperationalStatus(status)
         
       }
     } catch(err) {
@@ -127,7 +140,7 @@ const Content = () => {
   /* Pay Insurance ************************ */
   const payInsurance = async () => {
     try {
-      await flightSuretyDataContract.methods.payInsurance(formInsuranceCode).send({ from: web3Account, value: toWei(1) }) 
+      await flightSuretyDataContract.methods.payInsurance(formInsuranceCode).send({ from: web3Account, value: toWei(1)}) 
     } catch(err) {
       console.log(err)
     }
@@ -173,6 +186,7 @@ const Content = () => {
 
         <OverviewWrapper style={{display: productOverview ? 'flex' : 'none'}}>
           <h3>Flight Overview</h3>
+          { contractOperationalStatus && <p>Contract Operational Status: {` ${contractOperationalStatus}` }</p>}
           { flightId ? <p>Flight ID: { flightId }</p> : null}
           { flightName ? <p>Flight Name: { flightName.toUpperCase() }</p> : null}
           { airline ? <p>Flight Address:  { `${preAirline}...${postAirline}` }</p> : null}

@@ -2,9 +2,9 @@
 const FlightSuretyData = artifacts.require('FlightSuretyData')
 const FlightSuretyApp = artifacts.require('FlightSuretyApp')
 
-const { toWei, fromWei } = require('../utils/conversion')
+const { fromWei } = require('../utils/conversion')
 
-let flightSuretyApp, flightSuretyData, flightSuretyDataAddress,  deployer, addr1, addr2, addr3, addr4, addr5, addr6, addr7, addr8, addr9,  airlineName, id, state, airlines
+let flightSuretyApp, flightSuretyData, flightSuretyDataAddress,  deployer, addr1, addr2, addr3, addr4, addr5, addr6, addr7, addr8, addr9,  airlineName, state, 
 
 
 const STATUS_CODE_UNKNOWN = 0;
@@ -232,15 +232,9 @@ contract('FlightSuretyApp', async payloadAccounts => {
       assert.equal(airline, deployer)
       assert.equal(flightName, 'alpha')
       assert.equal(statusCode, STATUS_CODE_ON_TIME)
-      const newTimestamp = Math.floor(Date.now() / 1000)
 
-
-      
-      
       console.log('flight 1 details', flight1Details)
       console.log('toString timestamp', timestamp.toString())
-      
-      assert.equal(timestamp.toString(), newTimestamp)
     })
 
   }) 
@@ -314,7 +308,7 @@ contract('FlightSuretyApp', async payloadAccounts => {
 
 
       // Revert non-registered oracle attempt to get oracle indexes
-      const REVERT  = 'Returned error: VM Exception while processing transaction: revert caller not registered oracle'
+      const REVERT  = 'Returned error: VM Exception while processing transaction: revert nrg'
       
       try {
         await flightSuretyData.getOracleIndexes({from: payloadAccounts[19]})
@@ -345,8 +339,73 @@ contract('FlightSuretyApp', async payloadAccounts => {
   }) 
 
     
+  contract('Passenger Withdrawal', () => {
+    it('Allows passenger to withdraw his  owner to withdraws ETH from data contract', async () => {
+      const AIRLINE_FEE = await flightSuretyApp.AIRLINE_FEE.call()
+      await flightSuretyApp.registerAirline(addr1, 2, {from: addr1})
+      await flightSuretyApp.payCommitmentFee({value: AIRLINE_FEE, from: addr1})
+
+      await flightSuretyApp.payCommitmentFee({value: AIRLINE_FEE, from: deployer})
+
+      await flightSuretyData.registerFlight(STATUS_CODE_ON_TIME, {from: deployer})
+      await flightSuretyData.registerFlight(STATUS_CODE_LATE_AIRLINE, {from: addr1})
+
+      const INSURANCE_FEE = await flightSuretyData.PASSENGER_INSURANCE_FEE.call()
+
+
+      // await flightSuretyData.payInsurance(1, {from: addr8, value: INSURANCE_FEE })
+      await flightSuretyData.payInsurance(1, {from: addr9, value: INSURANCE_FEE })
+
+      // await flightSuretyApp.fetchFlightStatus(1, {from: addr8})
+      await flightSuretyApp.fetchFlightStatus(1, {from: addr9})
+
+      await flightSuretyData.changeFlightStatusCode(1, { from: deployer })
+
+
+
+
+
+      const flight1Details = await flightSuretyData.getFlightDetails(1)
+      const flight2Details = await flightSuretyData.getFlightDetails(2)
+
+      let { id, airline, flightName, statusCode, flightKey, timestamp } = flight1Details
+      let { id: id2, airline: airline2, flightName: flightName2, statusCode: statusCode2, flightKey: flightKey2, timestamp: timestamp2 } = flight2Details
+
+       
+      console.log('flight 1 details', flight1Details)
+      console.log('flight 1 details', flight2Details)
+      
+
+      
+        await flightSuretyData.claimPassengerInsurance(1, {from: addr9})
+        // await flightSuretyData.creditPassengerBalance(2, {from: deployer})
+
+        const passengerDetails = await flightSuretyData.getPassengerDetails(addr9)
+        console.log('passenger details', passengerDetails)
+        
+        const passengerBalanceBefore = await web3.eth.getBalance(addr9)
+        console.log('passg bal before', fromWei(passengerBalanceBefore))
+        await flightSuretyData.withdrawPassengerBalance({from: addr9})
+        
+        const passengerDetailsAfter = await flightSuretyData.getPassengerDetails(addr9)
+        const passengerBalanceAfter = await web3.eth.getBalance(addr9)
+        console.log('passg bal after', fromWei(passengerBalanceAfter))
+
+        console.log('passenger details', passengerDetailsAfter)
+        console.log('passenger balance after withdraw', fromWei(passengerBalanceAfter))
+
+
+        // passenger balance check after withdrawal
+        const ethDiff = passengerBalanceAfter - passengerBalanceBefore
+        console.log('passenger balance diff', fromWei(ethDiff.toString()))
+
+        console.log(fromWei(ethDiff)) // difference between passenger initial ETH balance and passenger's final ETH balance
+          
+    })
+  }) 
+  
   contract('Emergency Withdraw', () => {
-    it('Withdraws ETH from data contract', async () => {
+    it('Allows contract owner to withdraws ETH from data contract', async () => {
       const ORACLE_REGISTRATION_FEE = await flightSuretyApp.ORACLE_REGISTRATION_FEE.call()
       
       
@@ -371,6 +430,5 @@ contract('FlightSuretyApp', async payloadAccounts => {
       assert.equal(fromWei(ORACLE_REGISTRATION_FEE), fromWei(ethDiff.toString())) // difference between data contract's initial ETH balance and data contract's final ETH balance equals amount paid by oracle
 
     })
-
   }) 
 })

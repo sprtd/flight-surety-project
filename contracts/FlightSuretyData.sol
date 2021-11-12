@@ -42,9 +42,27 @@ contract FlightSuretyData is AirlineData {
 
   event LogFlightRegistered(string name, bytes32 flightKey, address indexed airline, uint256 timestamp, uint8 statusCode);
   event LogFlightStatusProcessed(address indexed airline, uint256 timestamp, uint8 statusCode);
+  event LogFlightStatusCodeChanged(uint256 flightId, uint8 statusCode);
 
    // Event fired when flight status request is requested
   event LogOracleRequest(uint8 index, address airline, string flight, uint256 timestamp);
+
+  
+  /********************************************************************************************/
+  /*                                      MODIFIER                                    */
+  /******************************************************************************************/
+
+
+  modifier isAirlineAuthorized() {
+    checkAirlineCommitmentStatus();
+    _;
+  }
+
+  function checkAirlineCommitmentStatus() public view {
+    (bool checkStatus ) = this.isAirlineCommitted(msg.sender);
+    require(checkStatus == true, 'nt com.');
+
+  }
 
 
    constructor() {
@@ -57,9 +75,8 @@ contract FlightSuretyData is AirlineData {
   /******************************************************************************************/
   
   // Register flight
-  function registerFlight(uint8 _statusCode) public {
-    (bool checkStatus ) = this.isAirlineCommitted(msg.sender);
-    require(checkStatus == true, 'airline not commited');
+  function registerFlight(uint8 _statusCode) public isAirlineAuthorized {
+
 
     (uint256 id, string memory name, address airlineAccount,) = this.getAirlineDetails(msg.sender);  
 
@@ -83,6 +100,21 @@ contract FlightSuretyData is AirlineData {
     emit LogFlightRegistered(name, flightKey, msg.sender, block.timestamp, _statusCode);
   }
 
+  // Generate a request for oracles  to fetch flight information
+  function fetchFlightStatus(uint8 _index, uint256 _flightId) external {
+    (, address airline, string memory flightName,, bytes32 flightKey, uint256 timestamp) = getFlightDetails(_flightId);
+
+    require(flightKeys[_flightId] == flightKey, 'NE flight');
+
+    // Generate a unique key for storing  the request
+    bytes32 key = keccak256(abi.encodePacked(_index, airline, flightName, timestamp));
+    oracleResponses[key].requester = tx.origin;
+    oracleResponses[key].isOpen = true;
+
+    emit LogOracleRequest(_index, airline, flightName, timestamp);
+  }
+
+  // 
   function processFlightStatus(address _airline, uint256 _timestamp, uint8 _statusCode)  private {
     bytes32 key = generateFlightKey(_airline, _timestamp);
     flights[key].statusCode = _statusCode;
@@ -90,24 +122,11 @@ contract FlightSuretyData is AirlineData {
     emit LogFlightStatusProcessed(_airline, _timestamp, _statusCode);
   }
 
-  // Generate a request for oracles  to fetch flight information
-  function fetchFlightStatus(uint8 _index, uint256 _flightId) external {
-    (, address airline, string memory flightName,, bytes32 flightKey, uint256 timestamp) = getFlightDetails(_flightId);
 
-    require(flightKeys[_flightId] == flightKey, 'NE flight');
-
-
-
-    // uint8 index = getRandomIndex(msg.sender);
-
-    // Generate a unique key for storing  the request
-    bytes32 key = keccak256(abi.encodePacked(_index, airline, flightName, timestamp));
-    oracleResponses[key].requester = tx.origin;
-    oracleResponses[key].isOpen = true;
-
-
-    emit LogOracleRequest(_index, airline, flightName, timestamp);
-  }
+  
+  /********************************************************************************************/
+  /*                                      FLIGHT UTILITY FUNCTIONS                 */
+  /******************************************************************************************/
 
   // Get flight details
   function getFlightDetails(uint256 _flightId) public view returns
@@ -121,7 +140,7 @@ contract FlightSuretyData is AirlineData {
 
     )
   {
-    require(_flightId != 0 || _flightId <= flightCounter, 'invalid flight id');
+    require(_flightId != 0 || _flightId <= flightCounter, 'inv id');
     bytes32 key = flightKeys[_flightId];
     id = flights[key].id;
     airline = flights[key].airline;
@@ -131,11 +150,8 @@ contract FlightSuretyData is AirlineData {
     timestamp = flights[key].timestamp;
     
   }
-  
-  /********************************************************************************************/
-  /*                                      FLIGHT UTILITY FUNCTIONS                 */
-  /******************************************************************************************/
 
+  // Generate flight key
   function generateFlightKey(address _airline, uint256 _timestamp) public pure returns(bytes32) {
     return keccak256(abi.encodePacked(_airline, _timestamp));
   }
@@ -182,7 +198,7 @@ contract FlightSuretyData is AirlineData {
   /*                                      ORACLE CORE FUNCTIONS                              */
   /******************************************************************************************/
   function registerOracle(uint8[3] memory _indexes) external payable {
-    require(!oracles[tx.origin].isRegistered, 'OR. registered');
+    require(!oracles[tx.origin].isRegistered, 'OR.reg');
     require(_indexes.length == 3, 'IND. Req');
     oracles[tx.origin] = Oracle({
       isRegistered: true,
@@ -212,9 +228,9 @@ contract FlightSuretyData is AirlineData {
       uint8 _statusCode
     ) external 
   {
-    require((oracles[msg.sender].indexes[0] == _index) || (oracles[msg.sender].indexes[1] == _index) || (oracles[msg.sender].indexes[2] == _index), 'IDX mismatch');
+    require((oracles[msg.sender].indexes[0] == _index) || (oracles[msg.sender].indexes[1] == _index) || (oracles[msg.sender].indexes[2] == _index));
     bytes32 key = keccak256(abi.encodePacked(_index, _airline, _flightName, _timestamp));
-    require(oracleResponses[key].isOpen, 'Fli. or timest. mismatch');
+    require(oracleResponses[key].isOpen, 'Fli. tm msmcth');
     oracleResponses[key].responses[_statusCode].push(msg.sender);
 
     // oracle response is not valid until MIN_RESPONSES threshold is reached
@@ -229,7 +245,7 @@ contract FlightSuretyData is AirlineData {
   /*                                      ORACLE UTILITY FUNCTIONS                           */
   /******************************************************************************************/
   function getOracleIndexes() external view returns(uint8[3] memory) {
-    require(oracles[msg.sender].isRegistered, 'caller not registered oracle');
+    require(oracles[msg.sender].isRegistered, 'nrg');
     return oracles[msg.sender].indexes;
 
   }
@@ -264,46 +280,111 @@ contract FlightSuretyData is AirlineData {
   }
 
   mapping(address =>  Insurance) passengersInsurance;
+  mapping (uint256 => address) public passengerIdToAddress;
+  mapping(address => uint256) public passengersBalances;
 
   
   uint256 public constant PASSENGER_INSURANCE_FEE = 1 ether;
+  uint256 passengerRefundAmount = 0;
 
 
   /********************************************************************************************/
   /*                                       EVENT                            */
   /********************************************************************************************/
-  event LogPassengerInsurance(address indexed account, uint256 amount);
+  event LogPassengerInsurance(address indexed passenger, uint256 amount);
+  event LogPassengerCredited(address indexed passenger, uint256 amount);
+  event LogWithdrawPassengerInsurance(address indexed passenger, uint256 withdrawAmount, uint256 formPassengerBalance );
 
+
+
+  
+  /********************************************************************************************/
+  /*                                       MODIFIER                         */
+  /********************************************************************************************/
+  modifier checkPassenger {
+    isPassengerAuthorizedToWithdraw();
+    _;
+  }
 
   /*******************************************************************************************/
   /*                                       PASSENGER FUNCTIONS                         */
   /*****************************************************************************************/
 
   function payInsurance(uint256 _flightId)  external payable {
-    require(msg.value == PASSENGER_INSURANCE_FEE, '1ETH insurance must be paid');
-    require(_flightId != 0 || _flightId <= flightCounter, 'invalid flight id');
+    require(msg.value == PASSENGER_INSURANCE_FEE, '1ETH req');
+    require(_flightId != 0 || _flightId <= flightCounter, 'inv fli. id');
 
     bytes32 key = flightKeys[_flightId];
-    require(_flightId == flights[key].id, "flight does not exist");
+    require(_flightId == flights[key].id, "fli nt ex");
 
     
-    require(passengersInsurance[tx.origin].state == PassengerInsuranceState.Unassigned, 'insurance exits');
+    require(passengersInsurance[tx.origin].state == PassengerInsuranceState.Unassigned, 'ins exits');
     (uint256 id, string memory name, address airlineAccount,) = this.getAirlineDetails(flights[key].airline);
 
     (bool send, ) = address(this).call{value: msg.value}('');
-    require(send, 'failed to send ETH');
+    require(send, 'failed to ETH');
+    passengersBalances[tx.origin] = msg.value;
 
-    passengersInsurance[msg.sender] = Insurance({
+    passengersInsurance[tx.origin] = Insurance({
       id: id,
       flightAddress: airlineAccount,
       passenger: msg.sender,
       flightName: name, 
-      amount: msg.value,
+      amount: passengersBalances[tx.origin],
       state: PassengerInsuranceState.Paid,
       refundAmount: 0
     });
+    passengerIdToAddress[_flightId] = tx.origin;
 
     emit LogPassengerInsurance(msg.sender, passengersInsurance[msg.sender].amount);
+  }
+
+  function claimPassengerInsurance(uint256 _flightId) public  {
+    require(_flightId != 0 || _flightId <= flightCounter, 'inv id');
+    (,,,, bytes32 flightKey,) = getFlightDetails(_flightId);
+
+
+    bytes32 key = flightKeys[_flightId];
+    require(_flightId == flights[key].id, 'NO FLI');
+    require(passengersInsurance[msg.sender].state == PassengerInsuranceState.Paid);
+    require(flights[flightKey].statusCode == 20, 'FL EL');
+    uint256 currentBalance  = passengersBalances[msg.sender];
+    uint256 refundAmount  =  currentBalance / 2;
+    
+    
+    passengersBalances[msg.sender] += refundAmount;
+    passengersInsurance[msg.sender].refundAmount = passengersBalances[msg.sender];
+
+
+    emit LogPassengerCredited(msg.sender, passengersBalances[msg.sender]);
+
+
+
+
+  }
+
+  function changeFlightStatusCode(uint256 _flightId) public  {
+    require(msg.sender == contractOwner, 'OWN');
+      require(_flightId != 0 || _flightId <= flightCounter);
+    (,,,, bytes32 flightKey,) = getFlightDetails(_flightId);
+
+    bytes32 key = flightKeys[_flightId];
+    require(_flightId == flights[key].id, "fli. ne");
+    flights[flightKey].statusCode = 20;
+    (,,, uint8 statusCode,,) = getFlightDetails(_flightId);
+    emit LogFlightStatusCodeChanged(_flightId, statusCode);
+  }
+
+  function withdrawPassengerBalance() public checkPassenger  {
+    require(msg.sender == tx.origin);
+    require(passengersBalances[msg.sender] == 1.5 ether);
+    passengersInsurance[msg.sender].state == PassengerInsuranceState.Claimed;
+    // passengersInsurance[msg.sender].refundAmount = 0;
+    uint256 withdrawAmount = passengersBalances[msg.sender];
+    passengersBalances[msg.sender] -= withdrawAmount;
+    (bool sent, ) = msg.sender.call{value: withdrawAmount}('');
+    require(sent, 'PASSG. WD FAIL');
+    emit LogWithdrawPassengerInsurance(msg.sender, withdrawAmount, passengersBalances[msg.sender]);
   }
 
   /***********************************,********************************************************/
@@ -345,17 +426,22 @@ contract FlightSuretyData is AirlineData {
     return passengersInsurance[_account].amount;
   }
 
+  function isPassengerAuthorizedToWithdraw() public view {
+    require(passengersInsurance[msg.sender].state == PassengerInsuranceState.Paid, 'PG NT PD');
+
+  }
+
   /********************************************************************************************/
   /*                                      CONTRACT RECEIVE ETHER                                */
   /********************************************************************************************/
 
   function emergencyWithdraw() external payable {
-    require(msg.sender == contractOwner, 'not ownr');
+    require(msg.sender == contractOwner, 'not');
     uint256 contractBalance = address(this).balance;
-    require(contractBalance > 0, 'no av. ETH');
+    require(contractBalance > 0);
     
     (bool sent,) = payable(contractOwner).call{value: contractBalance}('');
-    require(sent, 'failed to send ether');
+    require(sent, 'sd fail');
   }
 
 
