@@ -340,7 +340,7 @@ contract('FlightSuretyApp', async payloadAccounts => {
 
     
   contract('Passenger Withdrawal', () => {
-    it('Allows passenger to withdraw his  owner to withdraws ETH from data contract', async () => {
+    it('Allows passenger to withdraw his ETH deposit from data contract', async () => {
       const AIRLINE_FEE = await flightSuretyApp.AIRLINE_FEE.call()
       await flightSuretyApp.registerAirline(addr1, 2, {from: addr1})
       await flightSuretyApp.payCommitmentFee({value: AIRLINE_FEE, from: addr1})
@@ -353,10 +353,8 @@ contract('FlightSuretyApp', async payloadAccounts => {
       const INSURANCE_FEE = await flightSuretyData.PASSENGER_INSURANCE_FEE.call()
 
 
-      // await flightSuretyData.payInsurance(1, {from: addr8, value: INSURANCE_FEE })
       await flightSuretyData.payInsurance(1, {from: addr9, value: INSURANCE_FEE })
 
-      // await flightSuretyApp.fetchFlightStatus(1, {from: addr8})
       await flightSuretyApp.fetchFlightStatus(1, {from: addr9})
 
       await flightSuretyData.changeFlightStatusCode(1, { from: deployer })
@@ -378,7 +376,6 @@ contract('FlightSuretyApp', async payloadAccounts => {
 
       
         await flightSuretyData.claimPassengerInsurance(1, {from: addr9})
-        // await flightSuretyData.creditPassengerBalance(2, {from: deployer})
 
         const passengerDetails = await flightSuretyData.getPassengerDetails(addr9)
         console.log('passenger details', passengerDetails)
@@ -405,7 +402,7 @@ contract('FlightSuretyApp', async payloadAccounts => {
   }) 
   
   contract('Emergency Withdraw', () => {
-    it('Allows contract owner to withdraws ETH from data contract', async () => {
+    it('Allows contract owner to withdraw all deposited ETH from data contract', async () => {
       const ORACLE_REGISTRATION_FEE = await flightSuretyApp.ORACLE_REGISTRATION_FEE.call()
       
       

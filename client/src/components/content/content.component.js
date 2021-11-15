@@ -49,9 +49,7 @@ const Content = () => {
     const [formFetchFlightID, setFormFetchFlightID] = useState('')
     
     
-  let { id, flightAddress, flightName: flightFetchedName, passenger, state, amount, refundAmount  } = passengerResult
-
-
+  let { passenger, state, amount, refundAmount  } = passengerResult
 
 
   const { flightSuretyDataContract, flightSuretyAppContract } = useContext(FunctionContext)

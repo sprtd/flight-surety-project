@@ -214,11 +214,6 @@ contract FlightSuretyData is AirlineData {
     * response is only valid if there's a pending open request status  and  that its responxe index matches that which was assigned during oracle registration
    */
 
-       // Generate a unique key for storing  the request
-    // bytes32 key = keccak256(abi.encodePacked(_index, airline, timestamp));
-    // oracleResponses[key].requester = tx.origin;
-    // oracleResponses[key].isOpen = true;
-
   function submitOracleResponse
     (
       uint8 _index, 
@@ -260,7 +255,7 @@ contract FlightSuretyData is AirlineData {
 
 
   /********************************************************************************************/
-  /*                                      PASSENGER STATE VARIABLE FUNCTIONS                            */
+  /*                                      PASSENGER STATE VARIABLE FUNCTIONS                  */
   /********************************************************************************************/
 
   enum PassengerInsuranceState {
@@ -387,8 +382,8 @@ contract FlightSuretyData is AirlineData {
     emit LogWithdrawPassengerInsurance(msg.sender, withdrawAmount, passengersBalances[msg.sender]);
   }
 
-  /***********************************,********************************************************/
-  /*                                       PASSENGER UTILITY FUNCTIONS                         */
+  /*******************************************************************************************/
+  /*                                       PASSENGER UTILITY FUNCTIONS                      */
   /*****************************************************************************************/
   function getPassengerDetails(address _account) external view returns
     (
@@ -432,7 +427,7 @@ contract FlightSuretyData is AirlineData {
   }
 
   /********************************************************************************************/
-  /*                                      CONTRACT RECEIVE ETHER                                */
+  /*                                      CONTRACT RECEIVE ETHER                              */
   /********************************************************************************************/
 
   function emergencyWithdraw() external payable {
